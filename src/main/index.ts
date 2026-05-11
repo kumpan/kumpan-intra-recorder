@@ -1,5 +1,5 @@
 import { app, desktopCapturer, dialog, session } from "electron"
-import { createTray } from "@/main/tray"
+import { createTray, rebuildTrayMenu } from "@/main/tray"
 import { registerIpcHandlers } from "@/main/ipc"
 import { loadSettings } from "@/main/settings-store"
 import { openSettingsWindow, closeRecorderWindow } from "@/main/windows"
@@ -71,9 +71,11 @@ app.whenReady().then(async () => {
     { useSystemPicker: false }
   )
 
-  await loadSettings()
   registerIpcHandlers()
   createTray()
+
+  await loadSettings()
+  rebuildTrayMenu()
 
   const hotkey = applyConfiguredHotkey()
   if (!hotkey.ok && hotkey.message) {
