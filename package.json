@@ -1,0 +1,38 @@
+{
+  "name": "kumpan-intra-recorder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Companion menubar/tray app for intra.kumpan.se — records meeting audio for upload and server-side transcription.",
+  "main": "out/main/index.js",
+  "author": "Kumpan",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "typecheck": "pnpm typecheck:node && pnpm typecheck:web",
+    "format": "prettier --write .",
+    "build": "pnpm typecheck && electron-vite build",
+    "dist:mac": "pnpm build && electron-builder --mac",
+    "dist:win": "pnpm build && electron-builder --win",
+    "icons": "bash scripts/build-tray-icons.sh",
+    "release": "bash scripts/release.sh"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^3.0.0",
+    "prettier": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

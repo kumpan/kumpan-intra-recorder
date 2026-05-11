@@ -1,0 +1,36 @@
+appId: se.kumpan.intra.recorder
+productName: Kumpan Intra Recorder
+copyright: Kumpan
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: resources
+    to: ""
+    filter:
+      - trayIcon*.png
+mac:
+  icon: resources/icon.png
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  identity: null
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  extendInfo:
+    NSMicrophoneUsageDescription: Records your microphone during sales meetings so the audio can be uploaded to intra for transcription.
+    NSScreenCaptureUsageDescription: Captures system audio during sales meetings so the audio can be uploaded to intra for transcription.
+    LSUIElement: true
+win:
+  icon: resources/icon.png
+  target:
+    - target: portable
+      arch:
+        - x64
+  signAndEditExecutable: false
