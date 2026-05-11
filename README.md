@@ -23,9 +23,7 @@ Companion app for [intra.kumpan.se](https://intra.kumpan.se) — records meeting
 
 ## Getting your API token
 
-Paste your token into the app's Settings window (tray icon → **Settings…** → **Intra API Token**).
-
-Until intra ships its own settings page, ask in **#sales-tools** on Slack to get a token issued for you.
+Generate a token in your intra settings page, then paste it into the app's Settings window (tray icon → **Settings…** → **Intra API Token**).
 
 ## System requirements
 
