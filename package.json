@@ -1,6 +1,6 @@
 {
   "name": "kumpan-intra-recorder",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "Companion menubar/tray app for intra.kumpan.se — records meeting audio for upload and server-side transcription.",
   "main": "out/main/index.js",
