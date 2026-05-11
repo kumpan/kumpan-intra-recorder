@@ -23,6 +23,7 @@ export const IpcChannel = {
   HandoffCloseWindow: "handoff:close-window",
 
   OpenExternal: "shell:open-external",
+  ResetScreenRecording: "permissions:reset-screen-recording",
 } as const
 
 export type IpcChannelName = (typeof IpcChannel)[keyof typeof IpcChannel]

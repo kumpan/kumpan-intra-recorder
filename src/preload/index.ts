@@ -24,6 +24,9 @@ const api = {
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke(IpcChannel.OpenExternal, url),
 
+  resetScreenRecording: (): Promise<void> =>
+    ipcRenderer.invoke(IpcChannel.ResetScreenRecording),
+
   recorder: {
     start: (payload: RecorderStartPayload): Promise<void> =>
       ipcRenderer.invoke(IpcChannel.RecorderStart, payload),

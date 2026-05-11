@@ -23,6 +23,7 @@ import {
 } from "@/main/settings-store"
 import { tryUpdateHotkey } from "@/main/hotkey"
 import { closePostRecordingWindow, openSettingsWindow } from "@/main/windows"
+import { resetAndQuitForScreenRecording } from "@/main/permissions"
 import {
   handleAbort,
   handleChunk,
@@ -139,5 +140,9 @@ export function registerIpcHandlers(): void {
     if (typeof url !== "string") return
     if (!/^https?:\/\//i.test(url)) return
     await shell.openExternal(url)
+  })
+
+  ipcMain.handle(IpcChannel.ResetScreenRecording, async (): Promise<void> => {
+    await resetAndQuitForScreenRecording()
   })
 }

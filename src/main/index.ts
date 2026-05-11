@@ -5,6 +5,7 @@ import { loadSettings } from "@/main/settings-store"
 import { openSettingsWindow, closeRecorderWindow } from "@/main/windows"
 import { handleAbort } from "@/main/recorder-session"
 import { applyConfiguredHotkey, releaseHotkey } from "@/main/hotkey"
+import { maybeShowUpdateNotice } from "@/main/update-notice"
 
 if (process.platform === "darwin") {
   app.dock?.hide()
@@ -79,6 +80,8 @@ app.whenReady().then(async () => {
   if (!hotkey.ok && hotkey.message) {
     console.warn("[hotkey]", hotkey.message)
   }
+
+  void maybeShowUpdateNotice()
 })
 
 app.on("will-quit", () => {

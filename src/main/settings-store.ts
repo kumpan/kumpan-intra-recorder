@@ -12,12 +12,14 @@ type PersistedSettings = {
   baseUrl: string
   token: string | null
   hotkey: string
+  lastLaunchedVersion: string | null
 }
 
 const state: PersistedSettings = {
   baseUrl: DEFAULT_BASE_URL,
   token: null,
   hotkey: DEFAULT_HOTKEY,
+  lastLaunchedVersion: null,
 }
 
 let loaded = false
@@ -31,6 +33,7 @@ async function persist(): Promise<void> {
     baseUrl: state.baseUrl,
     token: state.token,
     hotkey: state.hotkey,
+    lastLaunchedVersion: state.lastLaunchedVersion,
   }
   const json = JSON.stringify(payload)
   const path = settingsPath()
@@ -71,6 +74,9 @@ export async function loadSettings(): Promise<void> {
     }
     if (typeof parsed.hotkey === "string") {
       state.hotkey = parsed.hotkey
+    }
+    if (typeof parsed.lastLaunchedVersion === "string") {
+      state.lastLaunchedVersion = parsed.lastLaunchedVersion
     }
   } catch (err) {
     console.error("[settings] failed to load, falling back to defaults", err)
@@ -113,5 +119,15 @@ export async function updateToken(value: string | null): Promise<void> {
 
 export async function updateHotkey(value: string): Promise<void> {
   state.hotkey = value.trim()
+  await persist()
+}
+
+export function getLastLaunchedVersion(): string | null {
+  return state.lastLaunchedVersion
+}
+
+export async function updateLastLaunchedVersion(value: string): Promise<void> {
+  if (state.lastLaunchedVersion === value) return
+  state.lastLaunchedVersion = value
   await persist()
 }
