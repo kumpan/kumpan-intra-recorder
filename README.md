@@ -40,3 +40,12 @@ Generate a token in your intra settings page, then paste it into the app's Setti
 4. Choose **Upload**, **Save locally**, or **Discard** in the modal that appears.
 
 Recordings are never uploaded automatically — you always confirm first.
+
+## Releasing (maintainers)
+
+A new release ships a `.dmg` (Apple Silicon + Intel) and a portable `.exe` to [GitHub Releases](../../releases). Two ways to cut one:
+
+- **In Claude Code:** type `/release` and let the bundled skill at `.claude/skills/release/SKILL.md` discover the latest tag, bump the version, draft a changelog from commits, and run the build after you confirm. Use `/release patch`, `/release minor`, `/release major`, or `/release vX.Y.Z` to control the bump.
+- **From the shell:** run `pnpm release vX.Y.Z "release notes"`. The script (`scripts/release.sh`) tags, runs `electron-builder` for macOS + Windows, and uploads to a new GitHub Release via `gh`.
+
+Prereqs: `gh auth login`, a clean working tree, and you're on `main`.
