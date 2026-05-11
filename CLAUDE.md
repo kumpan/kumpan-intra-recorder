@@ -80,10 +80,8 @@ Recordings **never auto-upload**. The modal always shows first — user-controll
 
 ## Upload contract (with intra)
 
-The intra-side endpoint is being built in parallel. Lock to this contract:
-
 ```
-POST {baseUrl}/api/sales/transcripts/upload
+POST {baseUrl}/api/transcripts/upload
 Authorization: Bearer <user-token>
 Content-Type: multipart/form-data
 

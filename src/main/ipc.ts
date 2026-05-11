@@ -71,7 +71,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannel.TestToken, async (): Promise<TokenTestResult> => {
     const token = getToken()
     if (!token) return { ok: false, message: "No token saved." }
-    const url = `${getBaseUrl()}/api/sales/transcripts/upload`
+    const url = `${getBaseUrl()}/api/transcripts/upload`
     try {
       const res = await fetch(url, {
         method: "HEAD",

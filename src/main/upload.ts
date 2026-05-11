@@ -16,7 +16,7 @@ type UploadParams = {
   onProgress: (p: UploadProgress) => void
 }
 
-const UPLOAD_PATH = "/api/sales/transcripts/upload"
+const UPLOAD_PATH = "/api/transcripts/upload"
 
 export async function uploadRecording(params: UploadParams): Promise<UploadOutcome> {
   const url = new URL(`${params.baseUrl}${UPLOAD_PATH}`)
