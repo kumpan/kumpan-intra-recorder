@@ -46,12 +46,19 @@ if [[ "$CURRENT_VERSION" != "$NPM_VERSION" ]]; then
   git commit -m "Release $VERSION"
 fi
 
-# Tag the release commit.
+# Tag the release commit (idempotent if tag is already at HEAD).
 if git rev-parse "$VERSION" >/dev/null 2>&1; then
-  echo "tag $VERSION already exists — refusing to overwrite." >&2
-  exit 1
+  EXISTING_TAG_SHA="$(git rev-list -n 1 "$VERSION")"
+  HEAD_SHA="$(git rev-parse HEAD)"
+  if [[ "$EXISTING_TAG_SHA" != "$HEAD_SHA" ]]; then
+    echo "tag $VERSION already exists but points to $EXISTING_TAG_SHA, not HEAD ($HEAD_SHA)." >&2
+    echo "delete the tag or pick a different version." >&2
+    exit 1
+  fi
+  echo "tag $VERSION already exists at HEAD — reusing."
+else
+  git tag -a "$VERSION" -m "Release $VERSION"
 fi
-git tag -a "$VERSION" -m "Release $VERSION"
 git push origin HEAD "$VERSION"
 
 # Build artifacts.
