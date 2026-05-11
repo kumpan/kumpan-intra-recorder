@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 # Tag the current commit and publish a GitHub Release with the macOS .dmg(s) and Windows .exe.
-# Usage: pnpm release v0.2.0 "Optional release notes"
+# Usage:
+#   pnpm release v0.2.0
+#   pnpm release v0.2.0 "Inline release notes"
+#   RELEASE_NOTES_FILE=/path/to/notes.md pnpm release v0.2.0
+#
+# Prefer RELEASE_NOTES_FILE for multi-line markdown — inline notes passed as the
+# second argument are subject to shell escaping pitfalls (backticks get evaluated,
+# heredocs that span lines may be mangled by upstream tools that flatten the
+# command). A file is parsed verbatim by `gh release create --notes-file`.
 set -euo pipefail
 
 VERSION="${1:-}"
 NOTES="${2:-}"
+NOTES_FILE="${RELEASE_NOTES_FILE:-}"
 
 if [[ -z "$VERSION" ]]; then
   echo "usage: pnpm release <vX.Y.Z> [\"release notes\"]" >&2
@@ -61,6 +70,9 @@ else
 fi
 git push origin HEAD "$VERSION"
 
+# Clean dist/ so leftover .dmg/.exe from a previous version don't get attached.
+rm -rf dist
+
 # Build artifacts.
 echo "building macOS .dmg(s)…"
 pnpm dist:mac
@@ -73,24 +85,28 @@ if [[ "${SKIP_WINDOWS:-}" != "1" ]]; then
   fi
 fi
 
-# Collect built artifacts.
+# Collect built artifacts for THIS version (filename includes NPM_VERSION).
 ARTIFACTS=()
 shopt -s nullglob
-for f in dist/*.dmg dist/*.exe; do
+for f in dist/*"${NPM_VERSION}"*.dmg dist/*"${NPM_VERSION}"*.exe; do
   ARTIFACTS+=("$f")
 done
 shopt -u nullglob
 
 if [[ ${#ARTIFACTS[@]} -eq 0 ]]; then
-  echo "no .dmg or .exe found under dist/" >&2
+  echo "no .dmg or .exe matching version $NPM_VERSION found under dist/" >&2
   exit 1
 fi
 
 # Create the GitHub Release and upload artifacts.
-if [[ -z "$NOTES" ]]; then
-  gh release create "$VERSION" "${ARTIFACTS[@]}" --generate-notes
+# Prefer --notes-file when we have one — safer than inline notes which the
+# caller may have built with backticks or other shell-active characters.
+if [[ -n "$NOTES_FILE" && -f "$NOTES_FILE" ]]; then
+  gh release create "$VERSION" "${ARTIFACTS[@]}" --title "$VERSION" --notes-file "$NOTES_FILE"
+elif [[ -n "$NOTES" ]]; then
+  gh release create "$VERSION" "${ARTIFACTS[@]}" --title "$VERSION" --notes "$NOTES"
 else
-  gh release create "$VERSION" "${ARTIFACTS[@]}" --notes "$NOTES"
+  gh release create "$VERSION" "${ARTIFACTS[@]}" --title "$VERSION" --generate-notes
 fi
 
 echo

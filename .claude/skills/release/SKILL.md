@@ -1,7 +1,7 @@
 ---
 name: release
 description: Cut a new GitHub Release of kumpan-intra-recorder. Use when the user asks to "release", "ship a new version", "publish", or "make a release". Reads the latest tag, bumps it (patch by default), drafts a changelog from commits since that release, and then runs `pnpm release` which tags, builds the .dmg/.exe, and uploads via the gh CLI.
-allowed-tools: Bash(git *) Bash(gh *) Bash(pnpm *) Bash(node -p *) Bash(node -e *) Read
+allowed-tools: Bash(git *) Bash(gh *) Bash(pnpm *) Bash(node -p *) Bash(node -e *) Bash(rm -rf dist*) Read Write
 ---
 
 # Release
@@ -93,15 +93,12 @@ Wait for explicit confirmation. Do not proceed on silence.
 
 ### 5. Execute the release
 
-Run the existing script — it does the heavy lifting (tag, build, upload):
+**Write the changelog to a temp file first — never pass it inline as a second argument.** Multi-line markdown with backticks (e.g. \`pnpm release\`) gets mangled when bash command strings are serialized by upstream tools: the heredoc may be flattened and backticks then execute as commands, polluting the release body with shell output. A file is parsed verbatim by `gh release create --notes-file`.
+
+Use the Write tool (not a Bash heredoc) to create `/tmp/release-notes.md` containing exactly the markdown changelog you drafted. Then run:
 
 ```
-pnpm release <new-version> "$(cat <<'EOF'
-## What's changed
-
-<the formatted changelog>
-EOF
-)"
+RELEASE_NOTES_FILE=/tmp/release-notes.md pnpm release <new-version>
 ```
 
 This takes ~5 minutes (electron-builder builds both macOS architectures + Windows portable .exe). Stream output so the user sees progress.
