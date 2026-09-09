@@ -15,6 +15,7 @@ export function Settings() {
   const [hasSavedToken, setHasSavedToken] = useState(false)
   const [hotkey, setHotkey] = useState("")
   const [hotkeyDefault, setHotkeyDefault] = useState("")
+  const [meetingNudge, setMeetingNudge] = useState(true)
   const [status, setStatus] = useState<Status>({ kind: "idle" })
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export function Settings() {
       setHasSavedToken(s.hasToken)
       setHotkey(s.hotkey)
       setHotkeyDefault(s.hotkeyDefault)
+      setMeetingNudge(s.meetingNudge)
     })
     return () => {
       cancelled = true
@@ -34,6 +36,12 @@ export function Settings() {
   const onHotkeyChange = async (next: string) => {
     const updated = await window.api.setSettings({ hotkey: next })
     setHotkey(updated.hotkey)
+  }
+
+  const onMeetingNudgeChange = async (next: boolean) => {
+    setMeetingNudge(next)
+    const updated = await window.api.setSettings({ meetingNudge: next })
+    setMeetingNudge(updated.meetingNudge)
   }
 
   const onSave = async (event: React.FormEvent) => {
@@ -92,6 +100,15 @@ export function Settings() {
         />
       </div>
 
+      <label className="toggle">
+        <input
+          type="checkbox"
+          checked={meetingNudge}
+          onChange={(e) => void onMeetingNudgeChange(e.target.checked)}
+        />
+        <span>Offer to record when a Google Meet or Zoom call is detected</span>
+      </label>
+
       <label className="field">
         <span>Intra base URL</span>
         <input
@@ -121,7 +138,11 @@ export function Settings() {
 
       <div className="actions">
         <button type="submit">Save</button>
-        <button type="button" onClick={onTest} disabled={!hasSavedToken && token.length === 0}>
+        <button
+          type="button"
+          onClick={onTest}
+          disabled={!hasSavedToken && token.length === 0}
+        >
           Test connection
         </button>
       </div>
@@ -135,17 +156,18 @@ export function Settings() {
 
 function TroubleshootingSection() {
   const isMac =
-    typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
+    typeof navigator !== "undefined" &&
+    /Mac|iPhone|iPad/.test(navigator.platform)
   if (!isMac) return null
   return (
     <section className="troubleshoot">
       <h2>After every update</h2>
       <p>
-        Because the app is unsigned, macOS treats each new version as a different
-        binary and revokes the Screen Recording permission you previously granted.
-        If recording stops working after an update, click the button below to clear
-        the stale permission entry — then reopen the app and grant fresh permission
-        when macOS asks.
+        Because the app is unsigned, macOS treats each new version as a
+        different binary and revokes the Screen Recording permission you
+        previously granted. If recording stops working after an update, click
+        the button below to clear the stale permission entry — then reopen the
+        app and grant fresh permission when macOS asks.
       </p>
       <button
         type="button"

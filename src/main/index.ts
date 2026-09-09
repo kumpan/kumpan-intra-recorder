@@ -6,6 +6,7 @@ import { openSettingsWindow, closeRecorderWindow } from "@/main/windows"
 import { handleAbort } from "@/main/recorder-session"
 import { applyConfiguredHotkey, releaseHotkey } from "@/main/hotkey"
 import { maybeShowUpdateNotice } from "@/main/update-notice"
+import { startMeetingWatcher, stopMeetingWatcher } from "@/main/meeting-watcher"
 
 if (process.platform === "darwin") {
   app.dock?.hide()
@@ -37,7 +38,9 @@ function reportFatal(scope: string, err: unknown): void {
 }
 
 process.on("uncaughtException", (err) => reportFatal("uncaughtException", err))
-process.on("unhandledRejection", (err) => reportFatal("unhandledRejection", err))
+process.on("unhandledRejection", (err) =>
+  reportFatal("unhandledRejection", err)
+)
 
 const gotSingleInstanceLock = app.requestSingleInstanceLock()
 if (!gotSingleInstanceLock) {
@@ -49,10 +52,13 @@ app.on("second-instance", () => {
 })
 
 app.whenReady().then(async () => {
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-    if (permission === "media" || permission === "display-capture") return callback(true)
-    callback(false)
-  })
+  session.defaultSession.setPermissionRequestHandler(
+    (_wc, permission, callback) => {
+      if (permission === "media" || permission === "display-capture")
+        return callback(true)
+      callback(false)
+    }
+  )
 
   session.defaultSession.setDisplayMediaRequestHandler(
     async (_request, callback) => {
@@ -75,6 +81,7 @@ app.whenReady().then(async () => {
   await loadSettings()
   registerIpcHandlers()
   createTray()
+  startMeetingWatcher()
 
   const hotkey = applyConfiguredHotkey()
   if (!hotkey.ok && hotkey.message) {
@@ -86,6 +93,7 @@ app.whenReady().then(async () => {
 
 app.on("will-quit", () => {
   releaseHotkey()
+  stopMeetingWatcher()
 })
 
 app.on("window-all-closed", () => {

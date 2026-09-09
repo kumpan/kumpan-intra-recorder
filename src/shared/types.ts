@@ -3,12 +3,19 @@ export type Settings = {
   hasToken: boolean
   hotkey: string
   hotkeyDefault: string
+  meetingNudge: boolean
 }
 
 export type SettingsUpdate = {
   baseUrl?: string
   token?: string | null
   hotkey?: string
+  meetingNudge?: boolean
+}
+
+export type MeetingBannerContext = {
+  source: string
+  title: string
 }
 
 export type HotkeyUpdateResult =

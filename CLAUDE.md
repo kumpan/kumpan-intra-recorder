@@ -35,6 +35,10 @@ Two-process Electron app, standard main/renderer split.
 - File system: write tmp recording chunks, delete on discard
 - HTTP upload to intra — the bearer token never leaves main, renderer only sees "uploading / done / failed"
 - `safeStorage` for token encryption
+- Meeting detection: polls `desktopCapturer.getSources({ types: ["window"] })` every 12s and
+  matches window titles (`src/main/meeting-match.ts`). A hit floats a banner offering
+  one-click record. Reuses the Screen Recording grant, so it stays silent until that grant
+  exists — polling earlier would spring the OS prompt before the user ever presses Record.
 - Settings persisted as encrypted JSON in `app.getPath("userData")`
 
 **Renderer process** (`src/renderer/`)
@@ -103,6 +107,7 @@ Tokens are generated per-user in intra's settings page. User pastes once into th
 ```bash
 pnpm dev            # electron-vite dev, hot-reload main + renderer
 pnpm typecheck      # tsc --noEmit (both processes)
+pnpm check          # assert-based self-check for the meeting-title matcher
 pnpm format         # prettier
 pnpm build          # type-check + bundle (no packaging)
 pnpm dist:mac       # .dmg
@@ -124,7 +129,8 @@ Lock these out:
 
 - Real-time transcription. Upload happens post-stop.
 - Lead/deal picker in the recorder — intra handles assignment after upload.
-- Auto-detect meeting start/end. Manual start/stop only.
+- Auto-**starting** a recording. The meeting banner detects a live Meet/Zoom window and
+  offers a one-click start, but nothing records without a click, and stopping is manual.
 - Code signing / notarisation.
 - Auto-update. Manual reinstall for new versions.
 - Linux build.

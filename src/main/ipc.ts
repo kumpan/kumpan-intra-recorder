@@ -1,6 +1,7 @@
 import { ipcMain, shell } from "electron"
 import { IpcChannel } from "@/shared/ipc"
 import type {
+  MeetingBannerContext,
   RecorderChunkPayload,
   RecorderFailedPayload,
   RecorderFinishPayload,
@@ -16,11 +17,18 @@ import {
   DEFAULT_HOTKEY,
   getBaseUrl,
   getHotkey,
+  getMeetingNudge,
   getToken,
   hasToken,
   updateBaseUrl,
+  updateMeetingNudge,
   updateToken,
 } from "@/main/settings-store"
+import {
+  acceptMeetingBanner,
+  dismissMeetingBanner,
+  getMeetingBannerContext,
+} from "@/main/meeting-watcher"
 import { tryUpdateHotkey } from "@/main/hotkey"
 import { closePostRecordingWindow, openSettingsWindow } from "@/main/windows"
 import { resetAndQuitForScreenRecording } from "@/main/permissions"
@@ -44,6 +52,7 @@ export function registerIpcHandlers(): void {
     hasToken: hasToken(),
     hotkey: getHotkey(),
     hotkeyDefault: DEFAULT_HOTKEY,
+    meetingNudge: getMeetingNudge(),
   })
 
   ipcMain.handle(IpcChannel.GetSettings, (): Settings => snapshot())
@@ -56,6 +65,9 @@ export function registerIpcHandlers(): void {
       }
       if (update.token !== undefined) {
         await updateToken(update.token)
+      }
+      if (typeof update.meetingNudge === "boolean") {
+        await updateMeetingNudge(update.meetingNudge)
       }
       if (typeof update.hotkey === "string") {
         const result = await tryUpdateHotkey(update.hotkey)
@@ -78,7 +90,8 @@ export function registerIpcHandlers(): void {
         method: "HEAD",
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (res.status === 401) return { ok: false, status: 401, message: "Token rejected." }
+      if (res.status === 401)
+        return { ok: false, status: 401, message: "Token rejected." }
       return { ok: true }
     } catch (err) {
       return {
@@ -92,13 +105,19 @@ export function registerIpcHandlers(): void {
     openSettingsWindow()
   })
 
-  ipcMain.handle(IpcChannel.RecorderStart, (_event, payload: RecorderStartPayload): void => {
-    handleStart(payload)
-  })
+  ipcMain.handle(
+    IpcChannel.RecorderStart,
+    (_event, payload: RecorderStartPayload): void => {
+      handleStart(payload)
+    }
+  )
 
-  ipcMain.on(IpcChannel.RecorderChunk, (_event, payload: RecorderChunkPayload) => {
-    handleChunk(payload)
-  })
+  ipcMain.on(
+    IpcChannel.RecorderChunk,
+    (_event, payload: RecorderChunkPayload) => {
+      handleChunk(payload)
+    }
+  )
 
   ipcMain.handle(
     IpcChannel.RecorderFinish,
@@ -107,13 +126,19 @@ export function registerIpcHandlers(): void {
     }
   )
 
-  ipcMain.handle(IpcChannel.RecorderAbort, async (_event, reason: string): Promise<void> => {
-    await handleAbort(reason)
-  })
+  ipcMain.handle(
+    IpcChannel.RecorderAbort,
+    async (_event, reason: string): Promise<void> => {
+      await handleAbort(reason)
+    }
+  )
 
-  ipcMain.on(IpcChannel.RecorderFailed, (_event, payload: RecorderFailedPayload) => {
-    handleFailed(payload)
-  })
+  ipcMain.on(
+    IpcChannel.RecorderFailed,
+    (_event, payload: RecorderFailedPayload) => {
+      handleFailed(payload)
+    }
+  )
 
   ipcMain.handle(IpcChannel.HandoffGetPending, (): RecordingResult | null => {
     return getPending()
@@ -136,11 +161,27 @@ export function registerIpcHandlers(): void {
     closePostRecordingWindow()
   })
 
-  ipcMain.handle(IpcChannel.OpenExternal, async (_event, url: string): Promise<void> => {
-    if (typeof url !== "string") return
-    if (!/^https?:\/\//i.test(url)) return
-    await shell.openExternal(url)
+  ipcMain.handle(
+    IpcChannel.MeetingBannerContext,
+    (): MeetingBannerContext | null => getMeetingBannerContext()
+  )
+
+  ipcMain.handle(IpcChannel.MeetingBannerAccept, async (): Promise<void> => {
+    await acceptMeetingBanner()
   })
+
+  ipcMain.handle(IpcChannel.MeetingBannerDismiss, (): void => {
+    dismissMeetingBanner()
+  })
+
+  ipcMain.handle(
+    IpcChannel.OpenExternal,
+    async (_event, url: string): Promise<void> => {
+      if (typeof url !== "string") return
+      if (!/^https?:\/\//i.test(url)) return
+      await shell.openExternal(url)
+    }
+  )
 
   ipcMain.handle(IpcChannel.ResetScreenRecording, async (): Promise<void> => {
     await resetAndQuitForScreenRecording()

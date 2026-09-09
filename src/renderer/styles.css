@@ -17,7 +17,8 @@
   --radius-sm: 6px;
 
   font-family:
-    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui,
+    sans-serif;
   font-size: 13px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
@@ -243,7 +244,8 @@ button.danger:hover:not(:disabled) {
   padding: 6px 12px;
   min-width: 110px;
   text-align: center;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   letter-spacing: 0.04em;
 }
 
@@ -291,4 +293,83 @@ button.danger:hover:not(:disabled) {
 
 .troubleshoot button {
   align-self: flex-start;
+}
+
+.toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.toggle input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.toggle span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* The banner window is transparent so the card can carry its own rounded corners and
+   shadow. It stretches to fill the frame because transparent pixels still swallow
+   clicks meant for the meeting underneath. */
+body:has(.banner) {
+  background: transparent;
+}
+
+.banner {
+  box-sizing: border-box;
+  height: calc(100vh - 12px);
+  margin: 6px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: rgba(19, 19, 19, 0.97);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
+
+.banner__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.banner__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.banner__text strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.banner__text span {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.banner__actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.banner__actions button.link {
+  align-self: center;
+  margin-top: 0;
 }

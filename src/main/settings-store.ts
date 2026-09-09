@@ -13,6 +13,7 @@ type PersistedSettings = {
   token: string | null
   hotkey: string
   lastLaunchedVersion: string | null
+  meetingNudge: boolean
 }
 
 const state: PersistedSettings = {
@@ -20,6 +21,7 @@ const state: PersistedSettings = {
   token: null,
   hotkey: DEFAULT_HOTKEY,
   lastLaunchedVersion: null,
+  meetingNudge: true,
 }
 
 let loaded = false
@@ -34,6 +36,7 @@ async function persist(): Promise<void> {
     token: state.token,
     hotkey: state.hotkey,
     lastLaunchedVersion: state.lastLaunchedVersion,
+    meetingNudge: state.meetingNudge,
   }
   const json = JSON.stringify(payload)
   const path = settingsPath()
@@ -78,6 +81,9 @@ export async function loadSettings(): Promise<void> {
     if (typeof parsed.lastLaunchedVersion === "string") {
       state.lastLaunchedVersion = parsed.lastLaunchedVersion
     }
+    if (typeof parsed.meetingNudge === "boolean") {
+      state.meetingNudge = parsed.meetingNudge
+    }
   } catch (err) {
     console.error("[settings] failed to load, falling back to defaults", err)
   } finally {
@@ -119,6 +125,16 @@ export async function updateToken(value: string | null): Promise<void> {
 
 export async function updateHotkey(value: string): Promise<void> {
   state.hotkey = value.trim()
+  await persist()
+}
+
+export function getMeetingNudge(): boolean {
+  return state.meetingNudge
+}
+
+export async function updateMeetingNudge(value: boolean): Promise<void> {
+  if (state.meetingNudge === value) return
+  state.meetingNudge = value
   await persist()
 }
 

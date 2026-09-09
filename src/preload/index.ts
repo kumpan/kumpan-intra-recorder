@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron"
 import { IpcChannel } from "@/shared/ipc"
 import type {
+  MeetingBannerContext,
   RecorderChunkPayload,
   RecorderFailedPayload,
   RecorderFinishPayload,
@@ -15,17 +16,28 @@ import type {
 } from "@/shared/types"
 
 const api = {
-  getSettings: (): Promise<Settings> => ipcRenderer.invoke(IpcChannel.GetSettings),
+  getSettings: (): Promise<Settings> =>
+    ipcRenderer.invoke(IpcChannel.GetSettings),
   setSettings: (update: SettingsUpdate): Promise<Settings> =>
     ipcRenderer.invoke(IpcChannel.SetSettings, update),
   hasToken: (): Promise<boolean> => ipcRenderer.invoke(IpcChannel.HasToken),
-  testToken: (): Promise<TokenTestResult> => ipcRenderer.invoke(IpcChannel.TestToken),
+  testToken: (): Promise<TokenTestResult> =>
+    ipcRenderer.invoke(IpcChannel.TestToken),
 
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke(IpcChannel.OpenExternal, url),
 
   resetScreenRecording: (): Promise<void> =>
     ipcRenderer.invoke(IpcChannel.ResetScreenRecording),
+
+  meeting: {
+    getContext: (): Promise<MeetingBannerContext | null> =>
+      ipcRenderer.invoke(IpcChannel.MeetingBannerContext),
+    accept: (): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.MeetingBannerAccept),
+    dismiss: (): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.MeetingBannerDismiss),
+  },
 
   recorder: {
     start: (payload: RecorderStartPayload): Promise<void> =>
@@ -43,27 +55,33 @@ const api = {
     onCommandStart: (cb: () => void): (() => void) => {
       const listener = () => cb()
       ipcRenderer.on(IpcChannel.RecorderCommandStart, listener)
-      return () => ipcRenderer.removeListener(IpcChannel.RecorderCommandStart, listener)
+      return () =>
+        ipcRenderer.removeListener(IpcChannel.RecorderCommandStart, listener)
     },
     onCommandStop: (cb: () => void): (() => void) => {
       const listener = () => cb()
       ipcRenderer.on(IpcChannel.RecorderCommandStop, listener)
-      return () => ipcRenderer.removeListener(IpcChannel.RecorderCommandStop, listener)
+      return () =>
+        ipcRenderer.removeListener(IpcChannel.RecorderCommandStop, listener)
     },
   },
 
   handoff: {
     getPending: (): Promise<RecordingResult | null> =>
       ipcRenderer.invoke(IpcChannel.HandoffGetPending),
-    upload: (): Promise<UploadOutcome> => ipcRenderer.invoke(IpcChannel.HandoffUpload),
+    upload: (): Promise<UploadOutcome> =>
+      ipcRenderer.invoke(IpcChannel.HandoffUpload),
     saveLocally: (): Promise<SaveLocallyOutcome> =>
       ipcRenderer.invoke(IpcChannel.HandoffSaveLocally),
     discard: (): Promise<void> => ipcRenderer.invoke(IpcChannel.HandoffDiscard),
-    closeWindow: (): Promise<void> => ipcRenderer.invoke(IpcChannel.HandoffCloseWindow),
+    closeWindow: (): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.HandoffCloseWindow),
     onUploadProgress: (cb: (p: UploadProgress) => void): (() => void) => {
-      const listener = (_e: Electron.IpcRendererEvent, p: UploadProgress) => cb(p)
+      const listener = (_e: Electron.IpcRendererEvent, p: UploadProgress) =>
+        cb(p)
       ipcRenderer.on(IpcChannel.HandoffUploadProgress, listener)
-      return () => ipcRenderer.removeListener(IpcChannel.HandoffUploadProgress, listener)
+      return () =>
+        ipcRenderer.removeListener(IpcChannel.HandoffUploadProgress, listener)
     },
   },
 }

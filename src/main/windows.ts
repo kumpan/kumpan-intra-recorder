@@ -1,15 +1,16 @@
-import { BrowserWindow, shell } from "electron"
+import { BrowserWindow, screen, shell } from "electron"
 import { join } from "node:path"
 
 let settingsWindow: BrowserWindow | null = null
 let recorderWindow: BrowserWindow | null = null
 let postRecordingWindow: BrowserWindow | null = null
+let meetingBannerWindow: BrowserWindow | null = null
 
 const preloadPath = (): string => join(__dirname, "../preload/index.js")
 
 function loadView(
   window: BrowserWindow,
-  view: "settings" | "recorder" | "post-recording"
+  view: "settings" | "recorder" | "post-recording" | "meeting-banner"
 ): void {
   const devUrl = process.env["ELECTRON_RENDERER_URL"]
   if (devUrl) {
@@ -150,4 +151,69 @@ export function closePostRecordingWindow(): void {
     postRecordingWindow.close()
   }
   postRecordingWindow = null
+}
+
+const BANNER_WIDTH = 400
+const BANNER_HEIGHT = 80
+
+export function openMeetingBanner(): void {
+  if (meetingBannerWindow && !meetingBannerWindow.isDestroyed()) {
+    meetingBannerWindow.showInactive()
+    return
+  }
+
+  const { workArea } = screen.getPrimaryDisplay()
+
+  meetingBannerWindow = new BrowserWindow({
+    width: BANNER_WIDTH,
+    height: BANNER_HEIGHT,
+    x: Math.round(workArea.x + (workArea.width - BANNER_WIDTH) / 2),
+    y: workArea.y + 12,
+    frame: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    focusable: false,
+    show: false,
+    webPreferences: {
+      preload: preloadPath(),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  })
+
+  // A Meet call is usually fullscreen. Plain alwaysOnTop sits below a fullscreen
+  // window on macOS; the screen-saver level plus the fullscreen-visible flag is what
+  // actually floats the banner over the call the user is about to forget to record.
+  meetingBannerWindow.setAlwaysOnTop(true, "screen-saver")
+  meetingBannerWindow.setVisibleOnAllWorkspaces(true, {
+    visibleOnFullScreen: true,
+  })
+
+  meetingBannerWindow.once("ready-to-show", () => {
+    // All views share index.html, so without this the banner announces itself to
+    // screen readers as the settings window.
+    meetingBannerWindow?.setTitle("Meeting detected")
+    meetingBannerWindow?.showInactive()
+  })
+
+  meetingBannerWindow.on("closed", () => {
+    meetingBannerWindow = null
+  })
+
+  loadView(meetingBannerWindow, "meeting-banner")
+}
+
+export function closeMeetingBanner(): void {
+  if (meetingBannerWindow && !meetingBannerWindow.isDestroyed()) {
+    meetingBannerWindow.destroy()
+  }
+  meetingBannerWindow = null
 }

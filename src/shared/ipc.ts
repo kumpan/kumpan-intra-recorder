@@ -22,6 +22,10 @@ export const IpcChannel = {
   HandoffUploadProgress: "handoff:upload-progress",
   HandoffCloseWindow: "handoff:close-window",
 
+  MeetingBannerContext: "meeting:banner-context",
+  MeetingBannerAccept: "meeting:banner-accept",
+  MeetingBannerDismiss: "meeting:banner-dismiss",
+
   OpenExternal: "shell:open-external",
   ResetScreenRecording: "permissions:reset-screen-recording",
 } as const
