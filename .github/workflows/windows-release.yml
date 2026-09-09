@@ -1,0 +1,50 @@
+name: Windows release build
+
+# electron-builder's bundled makensis (which the portable target needs) ships
+# Intel-only, so building the .exe on an Apple Silicon Mac needs Rosetta — which
+# Apple removes in macOS 28. Build it on real Windows instead and attach it to the
+# release that scripts/release.sh just published.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and attach the .exe to (e.g. v0.1.4)
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Resolve tag
+        id: tag
+        shell: bash
+        run: echo "tag=${{ inputs.tag || github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # pnpm check runs a .ts file through node directly, which needs the
+          # type-stripping that landed in Node 22.6.
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm dist:win
+
+      - name: Attach .exe to the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ steps.tag.outputs.tag }}" dist/*.exe --clobber

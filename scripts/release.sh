@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Tag the current commit and publish a GitHub Release with the macOS .dmg(s) and Windows .exe.
+# Tag the current commit and publish a GitHub Release with the macOS .dmg(s).
+# The Windows .exe is built and attached by .github/workflows/windows-release.yml.
 # Usage:
 #   pnpm release v0.2.0
 #   pnpm release v0.2.0 "Inline release notes"
@@ -77,24 +78,21 @@ rm -rf dist
 echo "building macOS .dmg(s)…"
 pnpm dist:mac
 
-if [[ "${SKIP_WINDOWS:-}" != "1" ]]; then
-  if pnpm dist:win >/dev/null 2>&1; then
-    echo "built Windows .exe"
-  else
-    echo "warn: pnpm dist:win failed (skip with SKIP_WINDOWS=1). Continuing with macOS only." >&2
-  fi
-fi
+# Windows is NOT built here. electron-builder's bundled makensis is Intel-only, so
+# cross-compiling the .exe on an Apple Silicon Mac needs Rosetta — which Apple removes
+# in macOS 28. The windows-release.yml workflow builds it on a real Windows runner when
+# this script publishes the release, and attaches it a few minutes later.
 
 # Collect built artifacts for THIS version (filename includes NPM_VERSION).
 ARTIFACTS=()
 shopt -s nullglob
-for f in dist/*"${NPM_VERSION}"*.dmg dist/*"${NPM_VERSION}"*.exe; do
+for f in dist/*"${NPM_VERSION}"*.dmg; do
   ARTIFACTS+=("$f")
 done
 shopt -u nullglob
 
 if [[ ${#ARTIFACTS[@]} -eq 0 ]]; then
-  echo "no .dmg or .exe matching version $NPM_VERSION found under dist/" >&2
+  echo "no .dmg matching version $NPM_VERSION found under dist/" >&2
   exit 1
 fi
 
@@ -110,5 +108,6 @@ else
 fi
 
 echo
-echo "released $VERSION:"
+echo "released $VERSION (macOS). Windows .exe is building on CI and will attach itself:"
+echo "  gh run watch \$(gh run list --workflow windows-release.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
 gh release view "$VERSION" --web 2>/dev/null || true

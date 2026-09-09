@@ -111,7 +111,9 @@ pnpm check          # assert-based self-check for the meeting-title matcher
 pnpm format         # prettier
 pnpm build          # type-check + bundle (no packaging)
 pnpm dist:mac       # .dmg
-pnpm dist:win       # portable .exe (no installer)
+pnpm dist:win       # portable .exe (no installer) — Windows only; fails on Apple
+                    # Silicon because electron-builder's makensis is Intel-only.
+                    # CI (.github/workflows/windows-release.yml) builds it on release.
 ```
 
 ## Conventions

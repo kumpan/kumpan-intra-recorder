@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a new GitHub Release of kumpan-intra-recorder. Use when the user asks to "release", "ship a new version", "publish", or "make a release". Reads the latest tag, bumps it (patch by default), drafts a changelog from commits since that release, and then runs `pnpm release` which tags, builds the .dmg/.exe, and uploads via the gh CLI.
+description: Cut a new GitHub Release of kumpan-intra-recorder. Use when the user asks to "release", "ship a new version", "publish", or "make a release". Reads the latest tag, bumps it (patch by default), drafts a changelog from commits since that release, and then runs `pnpm release` which tags, builds the macOS .dmg(s), and uploads via the gh CLI. The Windows .exe is built separately by CI and attaches itself to the published release.
 allowed-tools: Bash(git *) Bash(gh *) Bash(pnpm *) Bash(node -p *) Bash(node -e *) Bash(rm -rf dist*) Read Write
 ---
 
@@ -101,7 +101,16 @@ Use the Write tool (not a Bash heredoc) to create `/tmp/release-notes.md` contai
 RELEASE_NOTES_FILE=/tmp/release-notes.md pnpm release <new-version>
 ```
 
-This takes ~5 minutes (electron-builder builds both macOS architectures + Windows portable .exe). Stream output so the user sees progress.
+This takes ~3 minutes (electron-builder builds both macOS architectures). Stream output so the user sees progress.
+
+The Windows .exe is not built here — publishing the release triggers
+`.github/workflows/windows-release.yml`, which builds it on a Windows runner and
+attaches it within a few minutes. Tell the user it is still in flight, and give them the
+watch command the script prints. If they need it now, check on it:
+
+```
+gh run list --workflow windows-release.yml --limit 1
+```
 
 ### 6. Report success
 
@@ -113,7 +122,7 @@ Show that URL plus the stable alias: `https://github.com/kumpan/kumpan-intra-rec
 
 ## Implementation notes
 
-- **Don't re-implement `scripts/release.sh`.** It already handles the tag-is-at-HEAD case idempotently, builds both macOS archs + the Windows .exe, and uploads via `gh release create`. Your job is to compute the version + changelog and call the script.
-- **Cross-compiling Windows from macOS works** because `signAndEditExecutable: false` skips the rcedit step that would otherwise need Wine. Don't set `SKIP_WINDOWS=1` unless the build genuinely fails on this machine.
+- **Don't re-implement `scripts/release.sh`.** It already handles the tag-is-at-HEAD case idempotently, builds both macOS archs, and uploads via `gh release create`. Your job is to compute the version + changelog and call the script.
+- **Windows cannot be cross-compiled from an Apple Silicon Mac.** The `portable` target needs electron-builder's bundled `makensis`, which ships Intel-only, so spawning it without Rosetta fails with `Unknown system error -86` (EBADARCH) — and Apple removes Rosetta in macOS 28. That is why the .exe moved to a Windows CI runner. Don't add a local `pnpm dist:win` step back into the release path.
 - **If the build fails mid-way**, the tag and push may already be in place. Don't re-tag — just retry `pnpm release <new-version> "<notes>"` directly from a terminal once the failure is fixed.
 - **First-release case**: if `gh release list` returns nothing, there's no previous tag to diff against. Use `git log --no-merges` for the full changelog. Default version is `v0.1.0`.
