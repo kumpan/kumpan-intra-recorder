@@ -39,7 +39,10 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile
+      # Flat node_modules, not pnpm's default symlinked store. makensis is a legacy
+      # Win32 app capped at 260-char paths, and pnpm's hashed .pnpm directory names push
+      # app-builder-lib's own NSIS templates past that, so the include fails.
+      - run: pnpm install --frozen-lockfile --config.node-linker=hoisted
 
       - run: pnpm dist:win
 
