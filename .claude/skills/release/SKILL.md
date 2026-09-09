@@ -77,6 +77,36 @@ Output as markdown:
 
 Skip empty sections.
 
+Then append the install block below **verbatim**. The app is unsigned, so every release
+hits the same two macOS walls, and readers are non-technical colleagues who will file it
+as "the app is broken" otherwise:
+
+````markdown
+## Installing
+
+**Pick your file:** Apple Silicon Mac → `-arm64.dmg`. Intel Mac → `-x64.dmg`. Windows → the `.exe`.
+
+### macOS — required one-time step
+
+Open the dmg, drag the app to **Applications**, then run this once in Terminal:
+
+```
+xattr -dr com.apple.quarantine "/Applications/Kumpan Intra Recorder.app"
+```
+
+Without it macOS refuses to open the app and claims it **"is damaged and can't be opened"**. The file is fine — that's Gatekeeper rejecting an unsigned download, and on Apple Silicon it gives you no "open anyway" button. Right-click → Open does *not* get around it. The command just strips the "downloaded from the internet" flag.
+
+### macOS — after every update
+
+Because the app is unsigned, macOS treats each new version as a different program and revokes the Screen Recording permission you granted last time. Open the tray menu → **Reset Screen Recording permission…**, reopen the app from Applications, press **Start Recording** once, and grant access when macOS asks.
+
+The meeting banner stays silent until that permission is back — deliberately, so it never springs an OS prompt on you mid-call. Re-grant it and the banner appears within about 12 seconds of joining a call.
+
+### Windows
+
+Run the `.exe`. SmartScreen will warn — click **More info** → **Run anyway**.
+````
+
 If there are zero meaningful commits, warn the user — releasing means publishing identical bits — and ask if they want to proceed anyway.
 
 ### 4. Confirm with the user

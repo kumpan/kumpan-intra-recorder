@@ -12,8 +12,17 @@ This app is the **recorder only**. All transcription, summarisation, and project
 
 ## Audience
 
-Internal tool for ~30 Kumpan employees. Distributed unsigned via Slack/Drive — Mac users right-click → Open on first launch, Windows users SmartScreen → "More info" → Run anyway. No App Store, no Apple Developer account, no Authenticode
-signing in v1.
+Internal tool for ~30 Kumpan employees. Distributed unsigned via Slack/Drive. No App Store, no Apple Developer account, no Authenticode signing in v1.
+
+Install friction this causes, which every release note must spell out:
+
+- **macOS**: a downloaded build is quarantined, and Gatekeeper rejects an unsigned quarantined bundle on Apple Silicon with **"is damaged and can't be opened"** — no override button, and right-click → Open does *not* help (that only clears the older "unidentified developer" prompt). The fix is one command after dragging to Applications:
+  ```bash
+  xattr -dr com.apple.quarantine "/Applications/Kumpan Intra Recorder.app"
+  ```
+  Only signing + notarisation removes this step.
+- **macOS, every update**: the new binary has a different signature, so the Screen Recording grant is revoked. Users must run "Reset Screen Recording permission…" from the tray, reopen, and re-grant. The meeting banner stays silent until they do.
+- **Windows**: SmartScreen → "More info" → Run anyway.
 
 ## Tech stack
 
