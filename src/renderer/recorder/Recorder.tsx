@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react"
-import { startMixedRecording, type RecordingSession } from "@/renderer/recorder/mixer"
+import {
+  startMixedRecording,
+  type RecordingSession,
+} from "@/renderer/recorder/mixer"
 
 type Phase = "idle" | "starting" | "recording" | "stopping" | "error"
 
@@ -46,11 +49,15 @@ export function Recorder() {
         onStopped: () => {
           sessionRef.current = null
         },
+        onSilenceChange: (silent) => {
+          window.api.recorder.reportAudioActivity({ silent })
+        },
       })
       sessionRef.current = session
       setPhase("recording")
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to start recording."
+      const message =
+        err instanceof Error ? err.message : "Failed to start recording."
       setError(message)
       setPhase("error")
       window.api.recorder.reportFailure({
@@ -71,7 +78,8 @@ export function Recorder() {
       const endedAt = new Date().toISOString()
       await window.api.recorder.finish({ sessionId, endedAt })
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to stop cleanly."
+      const message =
+        err instanceof Error ? err.message : "Failed to stop cleanly."
       window.api.recorder.reportFailure({ sessionId, message })
       setError(message)
       setPhase("error")

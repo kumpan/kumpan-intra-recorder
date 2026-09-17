@@ -4,6 +4,7 @@ export type Settings = {
   hotkey: string
   hotkeyDefault: string
   meetingNudge: boolean
+  stopReminder: boolean
 }
 
 export type SettingsUpdate = {
@@ -11,12 +12,15 @@ export type SettingsUpdate = {
   token?: string | null
   hotkey?: string
   meetingNudge?: boolean
+  stopReminder?: boolean
 }
 
-export type MeetingBannerContext = {
-  source: string
-  title: string
-}
+// One banner window serves both prompts: "want to record this?" before a recording and
+// "still recording — want to stop?" during one.
+export type MeetingBannerContext =
+  | { kind: "start"; source: string; title: string }
+  | { kind: "stop"; reason: "meeting-ended"; source: string }
+  | { kind: "stop"; reason: "silence"; quietMinutes: number }
 
 export type HotkeyUpdateResult =
   | { ok: true; hotkey: string }
@@ -59,6 +63,10 @@ export type RecorderChunkPayload = {
 export type RecorderFinishPayload = {
   sessionId: string
   endedAt: string
+}
+
+export type AudioActivityPayload = {
+  silent: boolean
 }
 
 export type RecorderFailedPayload = {

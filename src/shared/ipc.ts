@@ -10,6 +10,7 @@ export const IpcChannel = {
   RecorderFinish: "recorder:finish",
   RecorderAbort: "recorder:abort",
   RecorderFailed: "recorder:failed",
+  RecorderAudioActivity: "recorder:audio-activity",
 
   RecorderCommandStart: "recorder:cmd-start",
   RecorderCommandStop: "recorder:cmd-stop",
@@ -23,6 +24,7 @@ export const IpcChannel = {
   HandoffCloseWindow: "handoff:close-window",
 
   MeetingBannerContext: "meeting:banner-context",
+  MeetingBannerUpdate: "meeting:banner-update",
   MeetingBannerAccept: "meeting:banner-accept",
   MeetingBannerDismiss: "meeting:banner-dismiss",
 

@@ -16,6 +16,7 @@ export function Settings() {
   const [hotkey, setHotkey] = useState("")
   const [hotkeyDefault, setHotkeyDefault] = useState("")
   const [meetingNudge, setMeetingNudge] = useState(true)
+  const [stopReminder, setStopReminder] = useState(true)
   const [status, setStatus] = useState<Status>({ kind: "idle" })
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export function Settings() {
       setHotkey(s.hotkey)
       setHotkeyDefault(s.hotkeyDefault)
       setMeetingNudge(s.meetingNudge)
+      setStopReminder(s.stopReminder)
     })
     return () => {
       cancelled = true
@@ -42,6 +44,12 @@ export function Settings() {
     setMeetingNudge(next)
     const updated = await window.api.setSettings({ meetingNudge: next })
     setMeetingNudge(updated.meetingNudge)
+  }
+
+  const onStopReminderChange = async (next: boolean) => {
+    setStopReminder(next)
+    const updated = await window.api.setSettings({ stopReminder: next })
+    setStopReminder(updated.stopReminder)
   }
 
   const onSave = async (event: React.FormEvent) => {
@@ -107,6 +115,15 @@ export function Settings() {
           onChange={(e) => void onMeetingNudgeChange(e.target.checked)}
         />
         <span>Offer to record when a Google Meet or Zoom call is detected</span>
+      </label>
+
+      <label className="toggle">
+        <input
+          type="checkbox"
+          checked={stopReminder}
+          onChange={(e) => void onStopReminderChange(e.target.checked)}
+        />
+        <span>Remind me to stop when the call ends or goes quiet</span>
       </label>
 
       <label className="field">

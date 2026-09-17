@@ -7,6 +7,7 @@ import { handleAbort } from "@/main/recorder-session"
 import { applyConfiguredHotkey, releaseHotkey } from "@/main/hotkey"
 import { maybeShowUpdateNotice } from "@/main/update-notice"
 import { startMeetingWatcher, stopMeetingWatcher } from "@/main/meeting-watcher"
+import { startStopReminder, stopStopReminder } from "@/main/stop-reminder"
 
 if (process.platform === "darwin") {
   app.dock?.hide()
@@ -81,6 +82,7 @@ app.whenReady().then(async () => {
   await loadSettings()
   registerIpcHandlers()
   createTray()
+  startStopReminder()
   startMeetingWatcher()
 
   const hotkey = applyConfiguredHotkey()
@@ -94,6 +96,7 @@ app.whenReady().then(async () => {
 app.on("will-quit", () => {
   releaseHotkey()
   stopMeetingWatcher()
+  stopStopReminder()
 })
 
 app.on("window-all-closed", () => {

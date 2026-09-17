@@ -31,7 +31,7 @@ export function openSettingsWindow(): void {
 
   settingsWindow = new BrowserWindow({
     width: 480,
-    height: 580,
+    height: 620,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -153,11 +153,12 @@ export function closePostRecordingWindow(): void {
   postRecordingWindow = null
 }
 
-const BANNER_WIDTH = 400
+const BANNER_WIDTH = 460
 const BANNER_HEIGHT = 80
 
-export function openMeetingBanner(): void {
+export function openMeetingBanner(title: string): void {
   if (meetingBannerWindow && !meetingBannerWindow.isDestroyed()) {
+    meetingBannerWindow.setTitle(title)
     meetingBannerWindow.showInactive()
     return
   }
@@ -200,7 +201,7 @@ export function openMeetingBanner(): void {
   meetingBannerWindow.once("ready-to-show", () => {
     // All views share index.html, so without this the banner announces itself to
     // screen readers as the settings window.
-    meetingBannerWindow?.setTitle("Meeting detected")
+    meetingBannerWindow?.setTitle(title)
     meetingBannerWindow?.showInactive()
   })
 
@@ -209,6 +210,12 @@ export function openMeetingBanner(): void {
   })
 
   loadView(meetingBannerWindow, "meeting-banner")
+}
+
+export function getMeetingBannerWindow(): BrowserWindow | null {
+  return meetingBannerWindow && !meetingBannerWindow.isDestroyed()
+    ? meetingBannerWindow
+    : null
 }
 
 export function closeMeetingBanner(): void {

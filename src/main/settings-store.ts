@@ -14,6 +14,7 @@ type PersistedSettings = {
   hotkey: string
   lastLaunchedVersion: string | null
   meetingNudge: boolean
+  stopReminder: boolean
 }
 
 const state: PersistedSettings = {
@@ -22,6 +23,7 @@ const state: PersistedSettings = {
   hotkey: DEFAULT_HOTKEY,
   lastLaunchedVersion: null,
   meetingNudge: true,
+  stopReminder: true,
 }
 
 let loaded = false
@@ -37,6 +39,7 @@ async function persist(): Promise<void> {
     hotkey: state.hotkey,
     lastLaunchedVersion: state.lastLaunchedVersion,
     meetingNudge: state.meetingNudge,
+    stopReminder: state.stopReminder,
   }
   const json = JSON.stringify(payload)
   const path = settingsPath()
@@ -83,6 +86,9 @@ export async function loadSettings(): Promise<void> {
     }
     if (typeof parsed.meetingNudge === "boolean") {
       state.meetingNudge = parsed.meetingNudge
+    }
+    if (typeof parsed.stopReminder === "boolean") {
+      state.stopReminder = parsed.stopReminder
     }
   } catch (err) {
     console.error("[settings] failed to load, falling back to defaults", err)
@@ -135,6 +141,16 @@ export function getMeetingNudge(): boolean {
 export async function updateMeetingNudge(value: boolean): Promise<void> {
   if (state.meetingNudge === value) return
   state.meetingNudge = value
+  await persist()
+}
+
+export function getStopReminder(): boolean {
+  return state.stopReminder
+}
+
+export async function updateStopReminder(value: boolean): Promise<void> {
+  if (state.stopReminder === value) return
+  state.stopReminder = value
   await persist()
 }
 
