@@ -1,6 +1,7 @@
 import { ipcMain, shell } from "electron"
 import { IpcChannel } from "@/shared/ipc"
 import type {
+  AudioActivityPayload,
   MeetingBannerContext,
   RecorderChunkPayload,
   RecorderFailedPayload,
@@ -21,14 +22,13 @@ import {
   getToken,
   hasToken,
   updateBaseUrl,
+  getStopReminder,
   updateMeetingNudge,
+  updateStopReminder,
   updateToken,
 } from "@/main/settings-store"
-import {
-  acceptMeetingBanner,
-  dismissMeetingBanner,
-  getMeetingBannerContext,
-} from "@/main/meeting-watcher"
+import { acceptBanner, dismissBanner, getBannerContext } from "@/main/banner"
+import { reportAudioActivity } from "@/main/stop-reminder"
 import { tryUpdateHotkey } from "@/main/hotkey"
 import { closePostRecordingWindow, openSettingsWindow } from "@/main/windows"
 import { resetAndQuitForScreenRecording } from "@/main/permissions"
@@ -53,6 +53,7 @@ export function registerIpcHandlers(): void {
     hotkey: getHotkey(),
     hotkeyDefault: DEFAULT_HOTKEY,
     meetingNudge: getMeetingNudge(),
+    stopReminder: getStopReminder(),
   })
 
   ipcMain.handle(IpcChannel.GetSettings, (): Settings => snapshot())
@@ -68,6 +69,9 @@ export function registerIpcHandlers(): void {
       }
       if (typeof update.meetingNudge === "boolean") {
         await updateMeetingNudge(update.meetingNudge)
+      }
+      if (typeof update.stopReminder === "boolean") {
+        await updateStopReminder(update.stopReminder)
       }
       if (typeof update.hotkey === "string") {
         const result = await tryUpdateHotkey(update.hotkey)
@@ -140,6 +144,13 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  ipcMain.on(
+    IpcChannel.RecorderAudioActivity,
+    (_event, payload: AudioActivityPayload) => {
+      reportAudioActivity(payload.silent)
+    }
+  )
+
   ipcMain.handle(IpcChannel.HandoffGetPending, (): RecordingResult | null => {
     return getPending()
   })
@@ -163,15 +174,15 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IpcChannel.MeetingBannerContext,
-    (): MeetingBannerContext | null => getMeetingBannerContext()
+    (): MeetingBannerContext | null => getBannerContext()
   )
 
   ipcMain.handle(IpcChannel.MeetingBannerAccept, async (): Promise<void> => {
-    await acceptMeetingBanner()
+    await acceptBanner()
   })
 
   ipcMain.handle(IpcChannel.MeetingBannerDismiss, (): void => {
-    dismissMeetingBanner()
+    dismissBanner()
   })
 
   ipcMain.handle(

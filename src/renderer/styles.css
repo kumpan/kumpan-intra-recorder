@@ -342,6 +342,11 @@ body:has(.banner) {
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
+.banner__dot--live {
+  background: var(--danger);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.22);
+}
+
 .banner__text {
   flex: 1;
   min-width: 0;

@@ -48,6 +48,18 @@ Two-process Electron app, standard main/renderer split.
   matches window titles (`src/main/meeting-match.ts`). A hit floats a banner offering
   one-click record. Reuses the Screen Recording grant, so it stays silent until that grant
   exists — polling earlier would spring the OS prompt before the user ever presses Record.
+  - A match is reduced to a **stable key** (the Meet code, or the normalised title) so one
+    call keeps one identity while its window title churns — tab switches, unread badges,
+    browser-name suffixes. `src/main/meeting-tracker.ts` holds each call across a 90s
+    grace window and hands out **one banner per call**, which is what keeps the nudge
+    from reappearing every time focus moves. It is pure, so `pnpm check` covers it.
+  - Stop reminders (`src/main/stop-reminder.ts`) keep the same poll running while
+    recording. When every call seen during the recording has been gone past the grace
+    window, or the mix has been silent for 5 minutes, the banner comes back asking to
+    stop. Ignored or dismissed, it snoozes 10 minutes and returns — the user who forgets
+    to stop is usually not at the screen.
+  - Both prompts share one banner window, brokered by `src/main/banner.ts`: whoever shows
+    it supplies the context and the accept/dismiss handlers.
 - Settings persisted as encrypted JSON in `app.getPath("userData")`
 
 **Renderer process** (`src/renderer/`)
@@ -58,6 +70,7 @@ Two-process Electron app, standard main/renderer split.
   - Mic: `getUserMedia({ audio: true })`
   - **Web Audio API** mixes them into **stereo: system audio on left, mic on right**. This single trick lets the server-side transcriber distinguish "you" from "everyone else on the call" without any extra diarisation work.
   - `MediaRecorder` encodes to `audio/webm; codecs=opus`, ~0.5 MB/min. Chunks streamed to main via IPC, appended to tmp file.
+  - An `AnalyserNode` taps the same mix to measure RMS once a second. Only the renderer can see the audio, so it reports "quiet" / "not quiet" to main; main decides how much quiet is worth interrupting for.
 - Settings window
 - Post-recording modal (Upload / Save locally / Discard)
 
@@ -116,7 +129,7 @@ Tokens are generated per-user in intra's settings page. User pastes once into th
 ```bash
 pnpm dev            # electron-vite dev, hot-reload main + renderer
 pnpm typecheck      # tsc --noEmit (both processes)
-pnpm check          # assert-based self-check for the meeting-title matcher
+pnpm check          # assert-based self-checks: meeting-title matcher + meeting tracker
 pnpm format         # prettier
 pnpm build          # type-check + bundle (no packaging)
 pnpm dist:mac       # .dmg
@@ -141,7 +154,9 @@ Lock these out:
 - Real-time transcription. Upload happens post-stop.
 - Lead/deal picker in the recorder — intra handles assignment after upload.
 - Auto-**starting** a recording. The meeting banner detects a live Meet/Zoom window and
-  offers a one-click start, but nothing records without a click, and stopping is manual.
+  offers a one-click start, but nothing records without a click. Stopping is prompted the
+  same way — the banner asks when the call ends or the room goes quiet — but never
+  automatic.
 - Code signing / notarisation.
 - Auto-update. Manual reinstall for new versions.
 - Linux build.

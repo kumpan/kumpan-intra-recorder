@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron"
 import { IpcChannel } from "@/shared/ipc"
 import type {
+  AudioActivityPayload,
   MeetingBannerContext,
   RecorderChunkPayload,
   RecorderFailedPayload,
@@ -37,6 +38,15 @@ const api = {
       ipcRenderer.invoke(IpcChannel.MeetingBannerAccept),
     dismiss: (): Promise<void> =>
       ipcRenderer.invoke(IpcChannel.MeetingBannerDismiss),
+    onContext: (cb: (context: MeetingBannerContext) => void): (() => void) => {
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        context: MeetingBannerContext
+      ) => cb(context)
+      ipcRenderer.on(IpcChannel.MeetingBannerUpdate, listener)
+      return () =>
+        ipcRenderer.removeListener(IpcChannel.MeetingBannerUpdate, listener)
+    },
   },
 
   recorder: {
@@ -51,6 +61,9 @@ const api = {
       ipcRenderer.invoke(IpcChannel.RecorderAbort, reason),
     reportFailure: (payload: RecorderFailedPayload): void => {
       ipcRenderer.send(IpcChannel.RecorderFailed, payload)
+    },
+    reportAudioActivity: (payload: AudioActivityPayload): void => {
+      ipcRenderer.send(IpcChannel.RecorderAudioActivity, payload)
     },
     onCommandStart: (cb: () => void): (() => void) => {
       const listener = () => cb()

@@ -35,11 +35,14 @@ Generate a token in your intra settings page, then paste it into the app's Setti
 ## Usage
 
 1. Start a meeting in Google Meet, Zoom, Teams, or any other tool.
-2. Click the menubar / tray icon → **Start Recording**.
-3. When the meeting ends, click the tray icon → **Stop Recording**.
+2. Click the menubar / tray icon → **Start Recording**. For Meet and Zoom a banner offers
+   this with one click — once per call, not every time you switch window.
+3. When the meeting ends, click the tray icon → **Stop Recording**. If you forget, the
+   banner reappears once the call is gone or nobody has spoken for five minutes.
 4. Choose **Upload**, **Save locally**, or **Discard** in the modal that appears.
 
-Recordings are never uploaded automatically — you always confirm first.
+Recordings are never uploaded automatically — you always confirm first. Both banners can
+be turned off in Settings.
 
 ## Releasing (maintainers)
 
