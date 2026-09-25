@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       electron-updater:
-        specifier: 6.3.9
+        specifier: ^6.3.9
         version: 6.3.9
       react:
         specifier: ^19.0.0
