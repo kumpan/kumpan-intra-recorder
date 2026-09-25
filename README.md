@@ -17,11 +17,11 @@ Companion app for [intra.kumpan.se](https://intra.kumpan.se) — records meeting
 
 ### Updates
 
-The app checks for updates on launch and every few hours, downloads them in the background and asks to restart. Tray icon → **Check for Updates…** checks right away.
+The app checks for updates on launch and every few hours, downloads them in the background, and shows **Restart** in the tray panel when one is ready. **Check for updates** at the bottom of the panel checks right away.
 
 ## Getting your API token
 
-Generate a token in your intra settings page, then paste it into the app's Settings window (tray icon → **Settings…** → **Intra API Token**).
+Generate a token in your intra settings page, then paste it into the app's Settings window (tray icon → ⚙ → **Intra API Token**).
 
 ## System requirements
 
@@ -33,11 +33,12 @@ Generate a token in your intra settings page, then paste it into the app's Setti
 ## Usage
 
 1. Start a meeting in Google Meet, Zoom, Teams, or any other tool.
-2. Click the menubar / tray icon → **Start Recording**. For Meet and Zoom a banner offers
+2. Click the menubar / tray icon → **Start recording**. For Meet and Zoom a banner offers
    this with one click — once per call, not every time you switch window.
-3. When the meeting ends, click the tray icon → **Stop Recording**. If you forget, the
+3. When the meeting ends, click the tray icon → **Stop recording**. If you forget, the
    banner reappears once the call is gone or nobody has spoken for five minutes.
-4. Choose **Upload**, **Save locally**, or **Discard** in the modal that appears.
+4. Choose **Upload**, **Save locally**, or **Discard** in the panel that opens. Click away and
+   it waits — the ● next to the menubar icon means a recording still needs a decision.
 
 Recordings are never uploaded automatically — you always confirm first. Both banners can
 be turned off in Settings.

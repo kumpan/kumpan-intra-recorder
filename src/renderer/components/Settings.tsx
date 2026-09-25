@@ -178,13 +178,12 @@ function TroubleshootingSection() {
   if (!isMac) return null
   return (
     <section className="troubleshoot">
-      <h2>After every update</h2>
+      <h2>Recording not working?</h2>
       <p>
-        Because the app is unsigned, macOS treats each new version as a
-        different binary and revokes the Screen Recording permission you
-        previously granted. If recording stops working after an update, click
-        the button below to clear the stale permission entry — then reopen the
-        app and grant fresh permission when macOS asks.
+        If macOS keeps refusing to record even though Screen Recording is on —
+        most often after upgrading from an old unsigned version — click the
+        button below to clear the stale permission entry, then reopen the app
+        and grant fresh permission when macOS asks.
       </p>
       <button
         type="button"

@@ -16,13 +16,14 @@ Internal tool for ~30 Kumpan employees. Distributed via GitHub Releases. No App 
 
 - **macOS**: signed with Kumpan's Developer ID and notarised by `scripts/release.sh`, so it opens without Gatekeeper warnings and keeps its Screen Recording grant across updates. Releases up to v0.1.5 were unsigned; `src/main/update-notice.ts` walks those users through re-granting once.
 - **Windows**: unsigned NSIS installer. SmartScreen → "More info" → Run anyway, on first install only.
-- **Updates**: `src/main/updater.ts` (electron-updater) checks the public GitHub releases at launch and every 6h, downloads in the background and offers a restart — never mid-recording. Tray → "Check for Updates…" does it on demand. It reads `latest-mac.yml` / `latest.yml` from the release, so those files must be uploaded with every build.
+- **Updates**: `src/main/updater.ts` (electron-updater) checks the public GitHub releases at launch and every 6h, downloads in the background and shows "Restart" in the tray panel — never mid-recording. The panel footer also checks on demand. It reads `latest-mac.yml` / `latest.yml` from the release, so those files must be uploaded with every build.
 
 ## Tech stack
 
 - **Electron** (latest stable) via **electron-vite**
 - **TypeScript** strict, no `any`
-- **React** for renderer UI (settings + post-recording modal)
+- **React** for renderer UI (tray panel + settings)
+- **electron-liquid-glass** (optional, macOS-only native addon) for the panel's Liquid Glass
 - **electron-builder** for packaging (`.dmg` + `.zip` and an NSIS `.exe` installer)
 - **electron-updater** for updates from GitHub Releases
 - **Electron `safeStorage`** for encrypting the intra API token at rest (no `keytar` — it's unmaintained and adds a native dep)
@@ -34,7 +35,12 @@ Two-process Electron app, standard main/renderer split.
 
 **Main process** (`src/main/`)
 
-- App lifecycle, tray icon, menus
+- App lifecycle, tray icon
+- Tray panel (`src/main/panel.ts`): clicking the tray icon opens a frameless window anchored
+  to it instead of a menu — record/stop, the post-recording choice, update status. Native
+  glass on macOS (Liquid Glass on 26+, blur below), a CSS card on Windows. It hides on
+  blur, so anything that opens a native dialog from it wraps the call in
+  `whilePanelPinned`. The app forces dark appearance: the UI has no light theme.
 - IPC orchestration
 - File system: write tmp recording chunks, delete on discard
 - HTTP upload to intra — the bearer token never leaves main, renderer only sees "uploading / done / failed"
@@ -67,7 +73,7 @@ Two-process Electron app, standard main/renderer split.
   - `MediaRecorder` encodes to `audio/webm; codecs=opus`, ~0.5 MB/min. Chunks streamed to main via IPC, appended to tmp file.
   - An `AnalyserNode` taps the same mix to measure RMS once a second. Only the renderer can see the audio, so it reports "quiet" / "not quiet" to main; main decides how much quiet is worth interrupting for.
 - Settings window
-- Post-recording modal (Upload / Save locally / Discard)
+- Tray panel, including the post-recording choice (Upload / Save locally / Discard)
 
 **Preload** (`src/preload/`)
 
@@ -92,12 +98,12 @@ Two-process Electron app, standard main/renderer split.
 ## File handling
 
 - During recording: append chunks to `app.getPath("temp")/kumpan-recording-<iso>.webm`.
-- On stop: file kept, modal shown.
+- On stop: file kept, the tray panel opens on the Upload / Save / Discard choice.
 - On **Upload**: stream to intra, delete on 2xx.
 - On **Save locally**: native save dialog.
 - On **Discard**: delete immediately.
 
-Recordings **never auto-upload**. The modal always shows first — user-controlled privacy is the whole point of the client-side approach.
+Recordings **never auto-upload**. The choice always shows first — user-controlled privacy is the whole point of the client-side approach.
 
 ## Upload contract (with intra)
 

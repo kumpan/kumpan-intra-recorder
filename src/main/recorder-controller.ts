@@ -8,8 +8,8 @@ import {
   closeRecorderWindow,
   ensureRecorderWindow,
   getRecorderWindow,
-  openPostRecordingWindow,
 } from "@/main/windows"
+import { showPanel } from "@/main/panel"
 import { setPending } from "@/main/recording-handoff"
 import {
   ensureMicrophoneAccess,
@@ -25,8 +25,7 @@ export async function startRecordingFromTray(): Promise<void> {
   requestStart(window, (outcome) => {
     closeRecorderWindow()
     if (outcome.ok) {
-      const post = openPostRecordingWindow()
-      setPending(outcome.result, post)
+      setPending(outcome.result, showPanel())
     } else {
       void handleStartFailure(outcome.message)
     }

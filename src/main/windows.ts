@@ -3,14 +3,14 @@ import { join } from "node:path"
 
 let settingsWindow: BrowserWindow | null = null
 let recorderWindow: BrowserWindow | null = null
-let postRecordingWindow: BrowserWindow | null = null
 let meetingBannerWindow: BrowserWindow | null = null
 
-const preloadPath = (): string => join(__dirname, "../preload/index.js")
+export const preloadPath = (): string =>
+  join(__dirname, "../preload/index.js")
 
-function loadView(
+export function loadView(
   window: BrowserWindow,
-  view: "settings" | "recorder" | "post-recording" | "meeting-banner"
+  view: "settings" | "recorder" | "panel" | "meeting-banner"
 ): void {
   const devUrl = process.env["ELECTRON_RENDERER_URL"]
   if (devUrl) {
@@ -100,57 +100,6 @@ export function closeRecorderWindow(): void {
     recorderWindow.destroy()
   }
   recorderWindow = null
-}
-
-export function openPostRecordingWindow(): BrowserWindow {
-  if (postRecordingWindow && !postRecordingWindow.isDestroyed()) {
-    postRecordingWindow.show()
-    postRecordingWindow.focus()
-    return postRecordingWindow
-  }
-
-  postRecordingWindow = new BrowserWindow({
-    width: 440,
-    height: 340,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    title: "Recording finished",
-    show: false,
-    alwaysOnTop: true,
-    backgroundColor: "#0a0a0a",
-    webPreferences: {
-      preload: preloadPath(),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  })
-
-  postRecordingWindow.once("ready-to-show", () => {
-    postRecordingWindow?.show()
-    postRecordingWindow?.focus()
-  })
-
-  postRecordingWindow.on("closed", () => {
-    postRecordingWindow = null
-  })
-
-  postRecordingWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
-    return { action: "deny" }
-  })
-
-  loadView(postRecordingWindow, "post-recording")
-  return postRecordingWindow
-}
-
-export function closePostRecordingWindow(): void {
-  if (postRecordingWindow && !postRecordingWindow.isDestroyed()) {
-    postRecordingWindow.close()
-  }
-  postRecordingWindow = null
 }
 
 const BANNER_WIDTH = 460

@@ -21,7 +21,15 @@ export const IpcChannel = {
   HandoffSaveLocally: "handoff:save-locally",
   HandoffDiscard: "handoff:discard",
   HandoffUploadProgress: "handoff:upload-progress",
-  HandoffCloseWindow: "handoff:close-window",
+
+  PanelGetState: "panel:get-state",
+  PanelStateChanged: "panel:state-changed",
+  PanelResize: "panel:resize",
+  PanelStartRecording: "panel:start-recording",
+  PanelStopRecording: "panel:stop-recording",
+  PanelCheckForUpdates: "panel:check-for-updates",
+  PanelInstallUpdate: "panel:install-update",
+  PanelQuit: "panel:quit",
 
   MeetingBannerContext: "meeting:banner-context",
   MeetingBannerUpdate: "meeting:banner-update",

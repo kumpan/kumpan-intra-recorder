@@ -41,6 +41,25 @@ export type RecorderState =
   | { kind: "recording"; startedAt: string }
   | { kind: "stopping" }
 
+export type UpdateState =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "downloading"; version: string }
+  | { kind: "ready"; version: string }
+  | { kind: "latest" }
+  | { kind: "error"; message: string }
+
+export type PanelState = {
+  recorder: RecorderState
+  pending: RecordingResult | null
+  update: UpdateState
+  version: string
+  hotkey: string
+  // Liquid Glass (or its blur fallback) sits behind the page; without it the page
+  // paints its own card.
+  glass: boolean
+}
+
 export type RecordingResult = {
   sessionId: string
   filePath: string

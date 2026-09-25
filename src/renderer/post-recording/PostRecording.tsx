@@ -15,7 +15,7 @@ type View =
   | { kind: "saved"; path: string }
   | { kind: "discarded" }
 
-export function PostRecording() {
+export function PostRecording({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<View>({ kind: "loading" })
 
   useEffect(() => {
@@ -72,18 +72,13 @@ export function PostRecording() {
 
   const onDiscard = async () => {
     await window.api.handoff.discard()
-    setView({ kind: "discarded" })
-    window.api.handoff.closeWindow()
-  }
-
-  const onClose = () => {
-    window.api.handoff.closeWindow()
+    onClose()
   }
 
   return (
-    <main className="handoff">
+    <section className="handoff">
       <Body view={view} onUpload={onUpload} onSave={onSave} onDiscard={onDiscard} onClose={onClose} />
-    </main>
+    </section>
   )
 }
 

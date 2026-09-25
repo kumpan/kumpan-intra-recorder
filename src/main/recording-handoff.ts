@@ -10,6 +10,7 @@ import type {
 } from "@/shared/types"
 import { getBaseUrl, getToken } from "@/main/settings-store"
 import { uploadRecording } from "@/main/upload"
+import { refreshPanel } from "@/main/panel"
 
 let pending: RecordingResult | null = null
 let host: BrowserWindow | null = null
@@ -18,6 +19,7 @@ let uploading = false
 export function setPending(result: RecordingResult, window: BrowserWindow): void {
   pending = result
   host = window
+  refreshPanel()
 }
 
 export function getPending(): RecordingResult | null {
@@ -31,6 +33,7 @@ export function isUploading(): boolean {
 function clear(): void {
   pending = null
   host = null
+  refreshPanel()
 }
 
 export async function discardPending(): Promise<void> {
@@ -41,18 +44,12 @@ export async function discardPending(): Promise<void> {
 
 export async function savePendingLocally(): Promise<SaveLocallyOutcome> {
   if (!pending) return { ok: false, message: "No recording pending." }
-  const parent = host ?? undefined
-  const dialogResult = parent
-    ? await dialog.showSaveDialog(parent, {
-        title: "Save recording",
-        defaultPath: basename(pending.filePath),
-        filters: [{ name: "WebM Audio", extensions: ["webm"] }],
-      })
-    : await dialog.showSaveDialog({
-        title: "Save recording",
-        defaultPath: basename(pending.filePath),
-        filters: [{ name: "WebM Audio", extensions: ["webm"] }],
-      })
+  // Free-standing, not a sheet: the host is the small tray panel.
+  const dialogResult = await dialog.showSaveDialog({
+    title: "Save recording",
+    defaultPath: basename(pending.filePath),
+    filters: [{ name: "WebM Audio", extensions: ["webm"] }],
+  })
   if (dialogResult.canceled || !dialogResult.filePath) {
     return { ok: false, canceled: true }
   }

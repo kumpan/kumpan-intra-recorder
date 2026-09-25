@@ -1,15 +1,15 @@
-import { app, Menu, Tray, nativeImage, nativeTheme } from "electron"
+import { app, Tray, nativeImage, nativeTheme, screen } from "electron"
+import type { Rectangle } from "electron"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
-import { openSettingsWindow } from "@/main/windows"
-import { getRecorderState, onRecorderState } from "@/main/recorder-session"
+import type { PanelState } from "@/shared/types"
+import { onRecorderState } from "@/main/recorder-session"
 import {
-  startRecordingFromTray,
-  stopRecordingFromTray,
-} from "@/main/recorder-controller"
-import { resetAndQuitForScreenRecording } from "@/main/permissions"
-import { getHotkey } from "@/main/settings-store"
-import { checkForUpdatesManually } from "@/main/updater"
+  onPanelState,
+  panelState,
+  refreshPanel,
+  togglePanel,
+} from "@/main/panel"
 
 let tray: Tray | null = null
 
@@ -49,76 +49,31 @@ function applyTrayImage(): void {
 export function createTray(): void {
   const image = loadTrayImage()
   tray = new Tray(image.isEmpty() ? nativeImage.createEmpty() : image)
-  rebuildMenu()
-  onRecorderState(() => rebuildMenu())
+  tray.on("click", () => togglePanel())
+  tray.on("right-click", () => togglePanel())
+  onPanelState(applyTrayChrome)
+  onRecorderState(() => refreshPanel())
+  applyTrayChrome(panelState())
   if (process.platform !== "darwin") {
     nativeTheme.on("updated", () => applyTrayImage())
   }
 }
 
-export function rebuildTrayMenu(): void {
-  rebuildMenu()
+export function getTrayBounds(): Rectangle {
+  const bounds = tray?.getBounds()
+  if (bounds && bounds.width > 0) return bounds
+  // Windows reports an empty rect for an icon in the overflow flyout; the cursor is on it.
+  return { ...screen.getCursorScreenPoint(), width: 0, height: 0 }
 }
 
-function rebuildMenu(): void {
+function applyTrayChrome(state: PanelState): void {
   if (!tray) return
-  const state = getRecorderState()
-
-  const hotkey = getHotkey() || undefined
-
-  let recordingItem: Electron.MenuItemConstructorOptions
-  switch (state.kind) {
-    case "idle":
-      recordingItem = {
-        label: "Start Recording",
-        accelerator: hotkey,
-        registerAccelerator: false,
-        click: () => {
-          void startRecordingFromTray()
-        },
-      }
-      break
-    case "starting":
-      recordingItem = { label: "Starting…", enabled: false }
-      break
-    case "recording":
-      recordingItem = {
-        label: "Stop Recording",
-        accelerator: hotkey,
-        registerAccelerator: false,
-        click: () => stopRecordingFromTray(),
-      }
-      break
-    case "stopping":
-      recordingItem = { label: "Stopping…", enabled: false }
-      break
-  }
-
-  const tooltip =
-    state.kind === "recording"
+  tray.setToolTip(
+    state.recorder.kind === "recording"
       ? "Kumpan Intra Recorder — recording…"
       : "Kumpan Intra Recorder"
-  tray.setToolTip(tooltip)
-
-  const items: Electron.MenuItemConstructorOptions[] = [
-    recordingItem,
-    { type: "separator" },
-    { label: "Settings…", click: () => openSettingsWindow() },
-    {
-      label: "Check for Updates…",
-      click: () => {
-        void checkForUpdatesManually()
-      },
-    },
-  ]
-  if (process.platform === "darwin") {
-    items.push({
-      label: "Reset Screen Recording permission…",
-      click: () => {
-        void resetAndQuitForScreenRecording()
-      },
-    })
-  }
-  items.push({ type: "separator" }, { label: "Quit", role: "quit" })
-  tray.setContextMenu(Menu.buildFromTemplate(items))
+  )
+  // A recording still waiting for Upload / Save / Discard outlives the panel closing;
+  // the dot is what points back at it.
+  if (process.platform === "darwin") tray.setTitle(state.pending ? "●" : "")
 }

@@ -3,6 +3,7 @@ import { IpcChannel } from "@/shared/ipc"
 import type {
   AudioActivityPayload,
   MeetingBannerContext,
+  PanelState,
   RecorderChunkPayload,
   RecorderFailedPayload,
   RecorderFinishPayload,
@@ -24,6 +25,9 @@ const api = {
   hasToken: (): Promise<boolean> => ipcRenderer.invoke(IpcChannel.HasToken),
   testToken: (): Promise<TokenTestResult> =>
     ipcRenderer.invoke(IpcChannel.TestToken),
+
+  openSettings: (): Promise<void> =>
+    ipcRenderer.invoke(IpcChannel.OpenSettings),
 
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke(IpcChannel.OpenExternal, url),
@@ -87,8 +91,6 @@ const api = {
     saveLocally: (): Promise<SaveLocallyOutcome> =>
       ipcRenderer.invoke(IpcChannel.HandoffSaveLocally),
     discard: (): Promise<void> => ipcRenderer.invoke(IpcChannel.HandoffDiscard),
-    closeWindow: (): Promise<void> =>
-      ipcRenderer.invoke(IpcChannel.HandoffCloseWindow),
     onUploadProgress: (cb: (p: UploadProgress) => void): (() => void) => {
       const listener = (_e: Electron.IpcRendererEvent, p: UploadProgress) =>
         cb(p)
@@ -96,6 +98,30 @@ const api = {
       return () =>
         ipcRenderer.removeListener(IpcChannel.HandoffUploadProgress, listener)
     },
+  },
+
+  panel: {
+    getState: (): Promise<PanelState> =>
+      ipcRenderer.invoke(IpcChannel.PanelGetState),
+    onState: (cb: (state: PanelState) => void): (() => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, state: PanelState) =>
+        cb(state)
+      ipcRenderer.on(IpcChannel.PanelStateChanged, listener)
+      return () =>
+        ipcRenderer.removeListener(IpcChannel.PanelStateChanged, listener)
+    },
+    resize: (height: number): void => {
+      ipcRenderer.send(IpcChannel.PanelResize, height)
+    },
+    startRecording: (): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.PanelStartRecording),
+    stopRecording: (): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.PanelStopRecording),
+    checkForUpdates: (): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.PanelCheckForUpdates),
+    installUpdate: (): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.PanelInstallUpdate),
+    quit: (): Promise<void> => ipcRenderer.invoke(IpcChannel.PanelQuit),
   },
 }
 

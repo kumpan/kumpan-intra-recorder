@@ -32,7 +32,7 @@ function eventToAccelerator(e: KeyboardEvent): string | null {
   return parts.join("+")
 }
 
-function formatForDisplay(accelerator: string, mac: boolean): string {
+export function formatForDisplay(accelerator: string, mac: boolean): string {
   if (!accelerator) return "Disabled"
   return accelerator
     .split("+")

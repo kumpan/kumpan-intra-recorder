@@ -5,7 +5,7 @@ import {
   startRecordingFromTray,
   stopRecordingFromTray,
 } from "@/main/recorder-controller"
-import { rebuildTrayMenu } from "@/main/tray"
+import { refreshPanel } from "@/main/panel"
 
 let registered: string | null = null
 
@@ -51,7 +51,7 @@ export async function tryUpdateHotkey(
     applyConfiguredHotkey()
     return { ok: false, hotkey: previous, message: result.message }
   }
-  rebuildTrayMenu()
+  refreshPanel()
   return { ok: true, hotkey: next }
 }
 

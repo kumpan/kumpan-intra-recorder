@@ -1,4 +1,4 @@
-import { app, desktopCapturer, dialog, session } from "electron"
+import { app, desktopCapturer, dialog, nativeTheme, session } from "electron"
 import { createTray } from "@/main/tray"
 import { registerIpcHandlers } from "@/main/ipc"
 import { loadSettings } from "@/main/settings-store"
@@ -54,6 +54,10 @@ app.on("second-instance", () => {
 })
 
 app.whenReady().then(async () => {
+  // The UI is dark-only (intra's look). Left to follow the system, light mode tints the
+  // panel's glass light under text that stays light.
+  nativeTheme.themeSource = "dark"
+
   session.defaultSession.setPermissionRequestHandler(
     (_wc, permission, callback) => {
       if (permission === "media" || permission === "display-capture")

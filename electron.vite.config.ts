@@ -8,7 +8,9 @@ const alias = {
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    // electron-liquid-glass is an optionalDependency (macOS-only native addon), which
+    // externalizeDepsPlugin doesn't pick up on its own.
+    plugins: [externalizeDepsPlugin({ include: ["electron-liquid-glass"] })],
     resolve: { alias },
     build: {
       lib: { entry: "src/main/index.ts" },

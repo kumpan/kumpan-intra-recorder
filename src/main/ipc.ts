@@ -1,8 +1,9 @@
-import { ipcMain, shell } from "electron"
+import { app, ipcMain, shell } from "electron"
 import { IpcChannel } from "@/shared/ipc"
 import type {
   AudioActivityPayload,
   MeetingBannerContext,
+  PanelState,
   RecorderChunkPayload,
   RecorderFailedPayload,
   RecorderFinishPayload,
@@ -30,7 +31,13 @@ import {
 import { acceptBanner, dismissBanner, getBannerContext } from "@/main/banner"
 import { reportAudioActivity } from "@/main/stop-reminder"
 import { tryUpdateHotkey } from "@/main/hotkey"
-import { closePostRecordingWindow, openSettingsWindow } from "@/main/windows"
+import { openSettingsWindow } from "@/main/windows"
+import { panelState, resizePanel, whilePanelPinned } from "@/main/panel"
+import {
+  startRecordingFromTray,
+  stopRecordingFromTray,
+} from "@/main/recorder-controller"
+import { checkForUpdates, installUpdate } from "@/main/updater"
 import { resetAndQuitForScreenRecording } from "@/main/permissions"
 import {
   handleAbort,
@@ -161,15 +168,38 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IpcChannel.HandoffSaveLocally,
-    async (): Promise<SaveLocallyOutcome> => savePendingLocally()
+    async (): Promise<SaveLocallyOutcome> =>
+      whilePanelPinned(() => savePendingLocally())
   )
 
   ipcMain.handle(IpcChannel.HandoffDiscard, async (): Promise<void> => {
     await discardPending()
   })
 
-  ipcMain.handle(IpcChannel.HandoffCloseWindow, (): void => {
-    closePostRecordingWindow()
+  ipcMain.handle(IpcChannel.PanelGetState, (): PanelState => panelState())
+
+  ipcMain.on(IpcChannel.PanelResize, (_event, height: number) => {
+    if (typeof height === "number" && Number.isFinite(height)) resizePanel(height)
+  })
+
+  ipcMain.handle(IpcChannel.PanelStartRecording, async (): Promise<void> => {
+    await startRecordingFromTray()
+  })
+
+  ipcMain.handle(IpcChannel.PanelStopRecording, (): void => {
+    stopRecordingFromTray()
+  })
+
+  ipcMain.handle(IpcChannel.PanelCheckForUpdates, async (): Promise<void> => {
+    await checkForUpdates(true)
+  })
+
+  ipcMain.handle(IpcChannel.PanelInstallUpdate, (): void => {
+    installUpdate()
+  })
+
+  ipcMain.handle(IpcChannel.PanelQuit, (): void => {
+    app.quit()
   })
 
   ipcMain.handle(
