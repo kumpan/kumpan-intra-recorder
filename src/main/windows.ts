@@ -1,7 +1,6 @@
 import { BrowserWindow, screen, shell } from "electron"
 import { join } from "node:path"
 
-let settingsWindow: BrowserWindow | null = null
 let recorderWindow: BrowserWindow | null = null
 let meetingBannerWindow: BrowserWindow | null = null
 
@@ -10,7 +9,7 @@ export const preloadPath = (): string =>
 
 export function loadView(
   window: BrowserWindow,
-  view: "settings" | "recorder" | "panel" | "meeting-banner"
+  view: "recorder" | "panel" | "meeting-banner"
 ): void {
   const devUrl = process.env["ELECTRON_RENDERER_URL"]
   if (devUrl) {
@@ -20,47 +19,6 @@ export function loadView(
       search: `view=${view}`,
     })
   }
-}
-
-export function openSettingsWindow(): void {
-  if (settingsWindow && !settingsWindow.isDestroyed()) {
-    settingsWindow.show()
-    settingsWindow.focus()
-    return
-  }
-
-  settingsWindow = new BrowserWindow({
-    width: 480,
-    height: 620,
-    resizable: false,
-    minimizable: false,
-    maximizable: false,
-    fullscreenable: false,
-    title: "Kumpan Recorder — Settings",
-    show: false,
-    backgroundColor: "#0a0a0a",
-    webPreferences: {
-      preload: preloadPath(),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  })
-
-  settingsWindow.once("ready-to-show", () => {
-    settingsWindow?.show()
-  })
-
-  settingsWindow.on("closed", () => {
-    settingsWindow = null
-  })
-
-  settingsWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
-    return { action: "deny" }
-  })
-
-  loadView(settingsWindow, "settings")
 }
 
 export async function ensureRecorderWindow(): Promise<BrowserWindow> {
@@ -149,7 +107,7 @@ export function openMeetingBanner(title: string): void {
 
   meetingBannerWindow.once("ready-to-show", () => {
     // All views share index.html, so without this the banner announces itself to
-    // screen readers as the settings window.
+    // screen readers as the tray panel.
     meetingBannerWindow?.setTitle(title)
     meetingBannerWindow?.showInactive()
   })

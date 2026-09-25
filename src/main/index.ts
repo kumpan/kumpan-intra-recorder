@@ -2,7 +2,8 @@ import { app, desktopCapturer, dialog, nativeTheme, session } from "electron"
 import { createTray } from "@/main/tray"
 import { registerIpcHandlers } from "@/main/ipc"
 import { loadSettings } from "@/main/settings-store"
-import { openSettingsWindow, closeRecorderWindow } from "@/main/windows"
+import { closeRecorderWindow } from "@/main/windows"
+import { showPanel } from "@/main/panel"
 import { handleAbort } from "@/main/recorder-session"
 import { applyConfiguredHotkey, releaseHotkey } from "@/main/hotkey"
 import { maybeShowUpdateNotice } from "@/main/update-notice"
@@ -49,8 +50,9 @@ if (!gotSingleInstanceLock) {
   app.quit()
 }
 
+// Opening the app again from Applications is looking for it: show where it lives.
 app.on("second-instance", () => {
-  openSettingsWindow()
+  showPanel()
 })
 
 app.whenReady().then(async () => {
@@ -106,5 +108,5 @@ app.on("will-quit", () => {
 })
 
 app.on("window-all-closed", () => {
-  // tray-only app; do not quit when the settings window closes
+  // tray-only app; do not quit when the last window closes
 })

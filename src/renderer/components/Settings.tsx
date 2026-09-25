@@ -97,8 +97,6 @@ export function Settings() {
 
   return (
     <form className="settings" onSubmit={onSave}>
-      <h1>Settings</h1>
-
       <div className="field">
         <span>Start/stop hotkey</span>
         <HotkeyField
@@ -114,7 +112,7 @@ export function Settings() {
           checked={meetingNudge}
           onChange={(e) => void onMeetingNudgeChange(e.target.checked)}
         />
-        <span>Offer to record when a Google Meet or Zoom call is detected</span>
+        <span>Offer to record when a call is detected</span>
       </label>
 
       <label className="toggle">

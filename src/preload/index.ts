@@ -26,9 +26,6 @@ const api = {
   testToken: (): Promise<TokenTestResult> =>
     ipcRenderer.invoke(IpcChannel.TestToken),
 
-  openSettings: (): Promise<void> =>
-    ipcRenderer.invoke(IpcChannel.OpenSettings),
-
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke(IpcChannel.OpenExternal, url),
 

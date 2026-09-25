@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import type { PanelState, RecorderState, UpdateState } from "@/shared/types"
 import { PostRecording } from "@/renderer/post-recording/PostRecording"
+import { Settings } from "@/renderer/components/Settings"
 import { formatForDisplay } from "@/renderer/components/HotkeyField"
 
 const isMac = /Mac/.test(navigator.platform)
@@ -8,6 +9,7 @@ const isMac = /Mac/.test(navigator.platform)
 export function Panel() {
   const [state, setState] = useState<PanelState | null>(null)
   const [handoffOpen, setHandoffOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -21,6 +23,15 @@ export function Panel() {
   useEffect(() => {
     if (pendingId) setHandoffOpen(true)
   }, [pendingId])
+
+  // Reopened from the tray, the panel starts on the recorder, not wherever it was left.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") setSettingsOpen(false)
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => document.removeEventListener("visibilitychange", onVisibility)
+  }, [])
 
   // The window is sized to the content, not the other way round.
   useEffect(() => {
@@ -38,16 +49,29 @@ export function Panel() {
       {state && (
         <>
           <header className="panel__header">
-            <strong>Kumpan Recorder</strong>
-            <button
-              type="button"
-              className="panel__icon"
-              aria-label="Settings"
-              title="Settings"
-              onClick={() => void window.api.openSettings()}
-            >
-              <GearIcon />
-            </button>
+            {settingsOpen && (
+              <button
+                type="button"
+                className="panel__icon"
+                aria-label="Back"
+                title="Back"
+                onClick={() => setSettingsOpen(false)}
+              >
+                <BackIcon />
+              </button>
+            )}
+            <strong>{settingsOpen ? "Settings" : "Kumpan Recorder"}</strong>
+            {!settingsOpen && (
+              <button
+                type="button"
+                className="panel__icon"
+                aria-label="Settings"
+                title="Settings"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <GearIcon />
+              </button>
+            )}
             <button
               type="button"
               className="panel__icon"
@@ -58,7 +82,9 @@ export function Panel() {
               <PowerIcon />
             </button>
           </header>
-          {handoffOpen ? (
+          {settingsOpen ? (
+            <Settings />
+          ) : handoffOpen ? (
             <PostRecording onClose={() => setHandoffOpen(false)} />
           ) : (
             <RecordButton recorder={state.recorder} hotkey={state.hotkey} />
@@ -197,6 +223,14 @@ function GearIcon() {
     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
       <circle cx="12" cy="12" r="3" />
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  )
+}
+
+function BackIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+      <polyline points="15 18 9 12 15 6" />
     </svg>
   )
 }

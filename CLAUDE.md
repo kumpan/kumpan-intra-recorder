@@ -80,7 +80,7 @@ Two-process Electron app, standard main/renderer split.
   - **Web Audio API** mixes them into **stereo: system audio on left, mic on right**. This single trick lets the server-side transcriber distinguish "you" from "everyone else on the call" without any extra diarisation work.
   - `MediaRecorder` encodes to `audio/webm; codecs=opus`, ~0.5 MB/min. Chunks streamed to main via IPC, appended to tmp file.
   - An `AnalyserNode` taps the same mix to measure RMS once a second. Only the renderer can see the audio, so it reports "quiet" / "not quiet" to main; main decides how much quiet is worth interrupting for.
-- Settings window
+- Settings, as a view inside the tray panel (⚙)
 - Tray panel, including the post-recording choice (Upload / Save locally / Discard)
 
 **Preload** (`src/preload/`)

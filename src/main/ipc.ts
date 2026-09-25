@@ -31,7 +31,6 @@ import {
 import { acceptBanner, dismissBanner, getBannerContext } from "@/main/banner"
 import { reportAudioActivity } from "@/main/stop-reminder"
 import { tryUpdateHotkey } from "@/main/hotkey"
-import { openSettingsWindow } from "@/main/windows"
 import { panelState, resizePanel, whilePanelPinned } from "@/main/panel"
 import {
   startRecordingFromTray,
@@ -110,10 +109,6 @@ export function registerIpcHandlers(): void {
         message: err instanceof Error ? err.message : "Network error.",
       }
     }
-  })
-
-  ipcMain.handle(IpcChannel.OpenSettings, (): void => {
-    openSettingsWindow()
   })
 
   ipcMain.handle(

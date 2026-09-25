@@ -3,7 +3,6 @@ export const IpcChannel = {
   SetSettings: "settings:set",
   HasToken: "settings:has-token",
   TestToken: "settings:test-token",
-  OpenSettings: "window:open-settings",
 
   RecorderStart: "recorder:start",
   RecorderChunk: "recorder:chunk",

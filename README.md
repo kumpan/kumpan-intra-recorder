@@ -21,7 +21,7 @@ The app checks for updates on launch and every few hours, downloads them in the 
 
 ## Getting your API token
 
-Generate a token in your intra settings page, then paste it into the app's Settings window (tray icon → ⚙ → **Intra API Token**).
+Generate a token in your intra settings page, then paste it into the app's settings (tray icon → ⚙ → **Intra API token**).
 
 ## System requirements
 
