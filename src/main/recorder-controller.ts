@@ -13,12 +13,14 @@ import { showPanel } from "@/main/panel"
 import { setPending } from "@/main/recording-handoff"
 import {
   ensureMicrophoneAccess,
+  ensureScreenRecordingAccess,
   showScreenRecordingHelpDialog,
 } from "@/main/permissions"
 
 export async function startRecordingFromTray(): Promise<void> {
   if (getRecorderState().kind !== "idle") return
 
+  if (!(await ensureScreenRecordingAccess())) return
   if (!(await ensureMicrophoneAccess())) return
 
   const window = await ensureRecorderWindow()

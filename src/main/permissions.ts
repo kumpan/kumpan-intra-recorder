@@ -1,4 +1,11 @@
-import { app, clipboard, dialog, shell, systemPreferences } from "electron"
+import {
+  app,
+  clipboard,
+  desktopCapturer,
+  dialog,
+  shell,
+  systemPreferences,
+} from "electron"
 import { exec as execCb } from "node:child_process"
 import { promisify } from "node:util"
 
@@ -86,6 +93,16 @@ export async function ensureMicrophoneAccess(): Promise<boolean> {
   return false
 }
 
+// Capture started without the grant records the mic alone — the call itself comes out
+// silent — and macOS only applies a new grant after a relaunch. So nothing starts
+// until it is there: explain, let macOS ask, and stop.
+export async function ensureScreenRecordingAccess(): Promise<boolean> {
+  if (process.platform !== "darwin") return true
+  if (systemPreferences.getMediaAccessStatus("screen") === "granted") return true
+  await showScreenRecordingHelpDialog("first-time")
+  return false
+}
+
 export async function showScreenRecordingHelpDialog(
   reason: "first-time" | "blocked",
   detail?: string
@@ -98,11 +115,14 @@ export async function showScreenRecordingHelpDialog(
 
   const body = isFirstTime
     ? [
-        "1. Click Open Settings below.",
-        `2. Turn on ${appLabel()} under Screen & System Audio Recording.`,
-        `3. Quit and reopen ${appLabel()} (macOS only applies the permission after a relaunch).`,
+        "Nothing is being recorded yet. macOS asks for this once:",
         "",
-        "Then start the recording again from the menu bar.",
+        "1. Click Continue, then Open System Settings in the macOS prompt.",
+        `2. Turn on ${appLabel()} under Screen & System Audio Recording.`,
+        "3. Click Quit & Reopen when macOS offers it.",
+        "",
+        "Then start the recording again. If macOS doesn't ask, click Open Settings",
+        "instead and turn it on there.",
       ]
     : [
         "macOS is denying the recording even though the toggle in Settings is on.",
@@ -124,7 +144,7 @@ export async function showScreenRecordingHelpDialog(
   }
 
   const buttons = isFirstTime
-    ? ["Open Settings", "Quit and reopen later", "Cancel"]
+    ? ["Continue", "Open Settings", "Cancel"]
     : ["Reset & Quit (recommended)", "Open Settings", "Quit", "Cancel"]
   const cancelId = buttons.length - 1
 
@@ -139,11 +159,17 @@ export async function showScreenRecordingHelpDialog(
   })
 
   const label = buttons[result.response]
-  if (label === "Reset & Quit (recommended)") {
+  if (label === "Continue") {
+    // Asking for sources is what makes macOS show its prompt and list the app in
+    // System Settings; the sources themselves aren't needed.
+    await desktopCapturer
+      .getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } })
+      .catch(() => [])
+  } else if (label === "Reset & Quit (recommended)") {
     await resetAndQuitForScreenRecording()
   } else if (label === "Open Settings") {
     await shell.openExternal(SCREEN_PREFS_URL)
-  } else if (label === "Quit" || label === "Quit and reopen later") {
+  } else if (label === "Quit") {
     app.quit()
   }
 }
