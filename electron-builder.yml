@@ -18,23 +18,39 @@ mac:
   # The x64 dmg used to build as "…-<version>.dmg" while only the arm64 one carried an
   # arch suffix, so the plainest-looking download was the Intel build — Apple Silicon
   # users who picked it got a "you need Rosetta" prompt. Name the arch in both.
-  artifactName: ${productName}-${version}-${arch}.${ext}
+  # ${name}, not ${productName}: GitHub turns the spaces into dots on upload, and the
+  # updater then 404s on the filename latest-mac.yml recorded.
+  artifactName: ${name}-${version}-${arch}.${ext}
   target:
+    # dmg for first installs, zip for the updater.
     - target: dmg
       arch:
         - arm64
         - x64
-  identity: null
-  hardenedRuntime: false
-  gatekeeperAssess: false
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  # Signs with the "Developer ID Application" cert in the login keychain, and
+  # notarises when APPLE_KEYCHAIN_PROFILE is set (scripts/release.sh sets it).
+  hardenedRuntime: true
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
   extendInfo:
     NSMicrophoneUsageDescription: Records your microphone during sales meetings so the audio can be uploaded to intra for transcription.
     NSScreenCaptureUsageDescription: Captures system audio during sales meetings so the audio can be uploaded to intra for transcription.
     LSUIElement: true
 win:
   icon: resources/icon.png
+  # An installer, not portable: electron-updater can only update NSIS installs.
   target:
-    - target: portable
+    - target: nsis
       arch:
         - x64
   signAndEditExecutable: false
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+publish:
+  provider: github
+  owner: kumpan
+  repo: kumpan-intra-recorder

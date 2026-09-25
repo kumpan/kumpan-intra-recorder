@@ -1,6 +1,6 @@
 name: Windows release build
 
-# electron-builder's bundled makensis (which the portable target needs) ships
+# electron-builder's bundled makensis (which the NSIS target needs) ships
 # Intel-only, so building the .exe on an Apple Silicon Mac needs Rosetta — which
 # Apple removes in macOS 28. Build it on real Windows instead and attach it to the
 # release that scripts/release.sh just published.
@@ -46,8 +46,9 @@ jobs:
 
       - run: pnpm dist:win
 
-      - name: Attach .exe to the release
+      # latest.yml + blockmap are what installed copies update from.
+      - name: Attach installer to the release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ steps.tag.outputs.tag }}" dist/*.exe --clobber
+        run: gh release upload "${{ steps.tag.outputs.tag }}" dist/*.exe dist/*.exe.blockmap dist/latest.yml --clobber

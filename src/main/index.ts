@@ -6,6 +6,7 @@ import { openSettingsWindow, closeRecorderWindow } from "@/main/windows"
 import { handleAbort } from "@/main/recorder-session"
 import { applyConfiguredHotkey, releaseHotkey } from "@/main/hotkey"
 import { maybeShowUpdateNotice } from "@/main/update-notice"
+import { startUpdater } from "@/main/updater"
 import { startMeetingWatcher, stopMeetingWatcher } from "@/main/meeting-watcher"
 import { startStopReminder, stopStopReminder } from "@/main/stop-reminder"
 
@@ -91,6 +92,7 @@ app.whenReady().then(async () => {
   }
 
   void maybeShowUpdateNotice()
+  startUpdater()
 })
 
 app.on("will-quit", () => {

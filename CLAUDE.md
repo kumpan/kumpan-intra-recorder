@@ -12,24 +12,19 @@ This app is the **recorder only**. All transcription, summarisation, and project
 
 ## Audience
 
-Internal tool for ~30 Kumpan employees. Distributed unsigned via Slack/Drive. No App Store, no Apple Developer account, no Authenticode signing in v1.
+Internal tool for ~30 Kumpan employees. Distributed via GitHub Releases. No App Store, no Authenticode signing.
 
-Install friction this causes, which every release note must spell out:
-
-- **macOS**: a downloaded build is quarantined, and Gatekeeper rejects an unsigned quarantined bundle on Apple Silicon with **"is damaged and can't be opened"** — no override button, and right-click → Open does *not* help (that only clears the older "unidentified developer" prompt). The fix is one command after dragging to Applications:
-  ```bash
-  xattr -dr com.apple.quarantine "/Applications/Kumpan Intra Recorder.app"
-  ```
-  Only signing + notarisation removes this step.
-- **macOS, every update**: the new binary has a different signature, so the Screen Recording grant is revoked. Users must run "Reset Screen Recording permission…" from the tray, reopen, and re-grant. The meeting banner stays silent until they do.
-- **Windows**: SmartScreen → "More info" → Run anyway.
+- **macOS**: signed with Kumpan's Developer ID and notarised by `scripts/release.sh`, so it opens without Gatekeeper warnings and keeps its Screen Recording grant across updates. Releases up to v0.1.5 were unsigned; `src/main/update-notice.ts` walks those users through re-granting once.
+- **Windows**: unsigned NSIS installer. SmartScreen → "More info" → Run anyway, on first install only.
+- **Updates**: `src/main/updater.ts` (electron-updater) checks the public GitHub releases at launch and every 6h, downloads in the background and offers a restart — never mid-recording. Tray → "Check for Updates…" does it on demand. It reads `latest-mac.yml` / `latest.yml` from the release, so those files must be uploaded with every build.
 
 ## Tech stack
 
 - **Electron** (latest stable) via **electron-vite**
 - **TypeScript** strict, no `any`
 - **React** for renderer UI (settings + post-recording modal)
-- **electron-builder** for packaging (`.dmg` and portable `.exe`)
+- **electron-builder** for packaging (`.dmg` + `.zip` and an NSIS `.exe` installer)
+- **electron-updater** for updates from GitHub Releases
 - **Electron `safeStorage`** for encrypting the intra API token at rest (no `keytar` — it's unmaintained and adds a native dep)
 - **pnpm** package manager (matches intra repo)
 
@@ -133,7 +128,7 @@ pnpm check          # assert-based self-checks: meeting-title matcher + meeting 
 pnpm format         # prettier
 pnpm build          # type-check + bundle (no packaging)
 pnpm dist:mac       # .dmg
-pnpm dist:win       # portable .exe (no installer) — Windows only; fails on Apple
+pnpm dist:win       # NSIS installer — Windows only; fails on Apple
                     # Silicon because electron-builder's makensis is Intel-only.
                     # CI (.github/workflows/windows-release.yml) builds it on release.
 ```
@@ -157,8 +152,7 @@ Lock these out:
   offers a one-click start, but nothing records without a click. Stopping is prompted the
   same way — the banner asks when the call ends or the room goes quiet — but never
   automatic.
-- Code signing / notarisation.
-- Auto-update. Manual reinstall for new versions.
+- Windows code signing.
 - Linux build.
 
 ## Build phases

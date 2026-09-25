@@ -9,6 +9,7 @@ import {
 } from "@/main/recorder-controller"
 import { resetAndQuitForScreenRecording } from "@/main/permissions"
 import { getHotkey } from "@/main/settings-store"
+import { checkForUpdatesManually } from "@/main/updater"
 
 let tray: Tray | null = null
 
@@ -103,6 +104,12 @@ function rebuildMenu(): void {
     recordingItem,
     { type: "separator" },
     { label: "Settings…", click: () => openSettingsWindow() },
+    {
+      label: "Check for Updates…",
+      click: () => {
+        void checkForUpdatesManually()
+      },
+    },
   ]
   if (process.platform === "darwin") {
     items.push({

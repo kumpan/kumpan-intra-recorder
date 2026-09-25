@@ -77,34 +77,24 @@ Output as markdown:
 
 Skip empty sections.
 
-Then append the install block below **verbatim**. The app is unsigned, so every release
-hits the same two macOS walls, and readers are non-technical colleagues who will file it
-as "the app is broken" otherwise:
+Then append the install block below **verbatim**. Readers are non-technical colleagues:
 
 ````markdown
 ## Installing
 
-**Pick your file:** Apple Silicon Mac → `-arm64.dmg`. Intel Mac → `-x64.dmg`. Windows → the `.exe`.
+**Pick your file:** Apple Silicon Mac → `-arm64.dmg`. Intel Mac → `-x64.dmg`. Windows → `-setup.exe`. Ignore the `.zip`, `.blockmap` and `.yml` files — the app's updater uses those.
 
-### macOS — required one-time step
+Already installed v0.1.6 or later? You don't need to download anything — the app updates itself and asks to restart. Tray icon → **Check for Updates…** to do it now.
 
-Open the dmg, drag the app to **Applications**, then run this once in Terminal:
+### macOS
 
-```
-xattr -dr com.apple.quarantine "/Applications/Kumpan Intra Recorder.app"
-```
+Open the dmg and drag the app to **Applications**.
 
-Without it macOS refuses to open the app and claims it **"is damaged and can't be opened"**. The file is fine — that's Gatekeeper rejecting an unsigned download, and on Apple Silicon it gives you no "open anyway" button. Right-click → Open does *not* get around it. The command just strips the "downloaded from the internet" flag.
-
-### macOS — after every update
-
-Because the app is unsigned, macOS treats each new version as a different program and revokes the Screen Recording permission you granted last time. Open the tray menu → **Reset Screen Recording permission…**, reopen the app from Applications, press **Start Recording** once, and grant access when macOS asks.
-
-The meeting banner stays silent until that permission is back — deliberately, so it never springs an OS prompt on you mid-call. Re-grant it and the banner appears within about 12 seconds of joining a call.
+**Coming from v0.1.5 or earlier?** Those builds were unsigned, so the Screen Recording permission you gave them doesn't carry over. The app offers to reset it on first launch — accept, reopen the app, press **Start Recording** once, and grant access when macOS asks. Future updates keep it.
 
 ### Windows
 
-Run the `.exe`. SmartScreen will warn — click **More info** → **Run anyway**.
+Run the `-setup.exe`. SmartScreen will warn — click **More info** → **Run anyway**. Coming from the old portable `.exe`? Delete it after installing.
 ````
 
 If there are zero meaningful commits, warn the user — releasing means publishing identical bits — and ask if they want to proceed anyway.
@@ -153,6 +143,6 @@ Show that URL plus the stable alias: `https://github.com/kumpan/kumpan-intra-rec
 ## Implementation notes
 
 - **Don't re-implement `scripts/release.sh`.** It already handles the tag-is-at-HEAD case idempotently, builds both macOS archs, and uploads via `gh release create`. Your job is to compute the version + changelog and call the script.
-- **Windows cannot be cross-compiled from an Apple Silicon Mac.** The `portable` target needs electron-builder's bundled `makensis`, which ships Intel-only, so spawning it without Rosetta fails with `Unknown system error -86` (EBADARCH) — and Apple removes Rosetta in macOS 28. That is why the .exe moved to a Windows CI runner. Don't add a local `pnpm dist:win` step back into the release path.
+- **Windows cannot be cross-compiled from an Apple Silicon Mac.** The NSIS target needs electron-builder's bundled `makensis`, which ships Intel-only, so spawning it without Rosetta fails with `Unknown system error -86` (EBADARCH) — and Apple removes Rosetta in macOS 28. That is why the .exe moved to a Windows CI runner. Don't add a local `pnpm dist:win` step back into the release path.
 - **If the build fails mid-way**, the tag and push may already be in place. Don't re-tag — just retry `pnpm release <new-version> "<notes>"` directly from a terminal once the failure is fixed.
 - **First-release case**: if `gh release list` returns nothing, there's no previous tag to diff against. Use `git log --no-merges` for the full changelog. Default version is `v0.1.0`.

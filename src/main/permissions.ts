@@ -107,9 +107,9 @@ export async function showScreenRecordingHelpDialog(
     : [
         "macOS is denying the recording even though the toggle in Settings is on.",
         "",
-        "This is the unsigned-build TCC quirk: every rebuild of an unsigned app",
-        "changes the binary's signature, so the existing permission entry no longer",
-        "matches. Toggling off/on rewrites the same broken entry.",
+        "This usually follows an upgrade from an old unsigned version: macOS keeps",
+        "a permission entry that no longer matches the app, and toggling off/on",
+        "rewrites the same broken entry.",
         "",
         "Recommended fix:",
         `  • Click "Reset & Quit". The app will run \`${TCC_RESET_COMMAND}\``,

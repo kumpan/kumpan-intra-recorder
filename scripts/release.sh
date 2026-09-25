@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Tag the current commit and publish a GitHub Release with the macOS .dmg(s).
+# Tag the current commit and publish a GitHub Release with the signed, notarised macOS
+# builds.
 # The Windows .exe is built and attached by .github/workflows/windows-release.yml.
 # Usage:
 #   pnpm release v0.2.0
@@ -39,6 +40,21 @@ fi
 # Stop if there are uncommitted changes — release should reflect a real commit.
 if [[ -n "$(git status --porcelain)" ]]; then
   echo "working tree is dirty — commit or stash before releasing." >&2
+  exit 1
+fi
+
+# Signing + notarisation. Check before tagging so a missing credential can't leave a
+# pushed tag with no release behind it. The notary profile is team-wide, not per app:
+# passbolt-mac stored it with `xcrun notarytool store-credentials PassboltBar`.
+SIGN_ID="Developer ID Application: Kumpan Grafisk Form AB (NH4M8452G6)"
+export APPLE_KEYCHAIN_PROFILE="${APPLE_KEYCHAIN_PROFILE:-PassboltBar}"
+if ! security find-identity -v -p codesigning | grep -q "$SIGN_ID"; then
+  echo "\"$SIGN_ID\" not found in your keychain — can't sign the release." >&2
+  exit 1
+fi
+if ! xcrun notarytool history --keychain-profile "$APPLE_KEYCHAIN_PROFILE" >/dev/null 2>&1; then
+  echo "notarytool keychain profile \"$APPLE_KEYCHAIN_PROFILE\" missing or rejected. Create it:" >&2
+  echo "  xcrun notarytool store-credentials $APPLE_KEYCHAIN_PROFILE --apple-id <apple-id> --team-id NH4M8452G6 --password <app-specific-password>" >&2
   exit 1
 fi
 
@@ -83,18 +99,20 @@ pnpm dist:mac
 # in macOS 28. The windows-release.yml workflow builds it on a real Windows runner when
 # this script publishes the release, and attaches it a few minutes later.
 
-# Collect built artifacts for THIS version (filename includes NPM_VERSION).
+# Collect built artifacts for THIS version (filename includes NPM_VERSION). The zips,
+# blockmaps and latest-mac.yml are what installed copies update from.
 ARTIFACTS=()
 shopt -s nullglob
-for f in dist/*"${NPM_VERSION}"*.dmg; do
+for f in dist/*"${NPM_VERSION}"*.{dmg,zip,blockmap}; do
   ARTIFACTS+=("$f")
 done
 shopt -u nullglob
 
-if [[ ${#ARTIFACTS[@]} -eq 0 ]]; then
-  echo "no .dmg matching version $NPM_VERSION found under dist/" >&2
+if [[ ! -f dist/latest-mac.yml ]] || ! compgen -G "dist/*${NPM_VERSION}*.dmg" >/dev/null; then
+  echo "no .dmg / latest-mac.yml for version $NPM_VERSION under dist/" >&2
   exit 1
 fi
+ARTIFACTS+=(dist/latest-mac.yml)
 
 # Create the GitHub Release and upload artifacts.
 # Prefer --notes-file when we have one — safer than inline notes which the

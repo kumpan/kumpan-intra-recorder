@@ -14,12 +14,13 @@
     "check": "node src/main/meeting-match.check.ts && node src/main/meeting-tracker.check.ts",
     "format": "prettier --write .",
     "build": "pnpm typecheck && pnpm check && electron-vite build",
-    "dist:mac": "pnpm build && electron-builder --mac",
-    "dist:win": "pnpm build && electron-builder --win",
+    "dist:mac": "pnpm build && electron-builder --mac --publish never",
+    "dist:win": "pnpm build && electron-builder --win --publish never",
     "icons": "bash scripts/build-tray-icons.sh",
     "release": "bash scripts/release.sh"
   },
   "dependencies": {
+    "electron-updater": "^6.3.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

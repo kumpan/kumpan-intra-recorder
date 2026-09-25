@@ -6,20 +6,18 @@ Companion app for [intra.kumpan.se](https://intra.kumpan.se) — records meeting
 
 ### macOS
 
-1. Download the `.dmg` from the [latest GitHub release](../../releases/latest).
+1. Download the `.dmg` from the [latest GitHub release](../../releases/latest) — `-arm64` for Apple Silicon, `-x64` for Intel.
 2. Open the `.dmg` and drag the app to **Applications**.
-3. **First launch:** right-click the app in Applications → **Open**.
-4. At the Gatekeeper warning, click **Open** again.
-
-> The app is unsigned. macOS will only show the warning on first launch — subsequent opens work normally.
 
 ### Windows
 
-1. Download the `.exe` from the [latest GitHub release](../../releases/latest).
-2. Double-click to run.
-3. At the SmartScreen prompt, click **More info** → **Run anyway**.
+1. Download the `-setup.exe` from the [latest GitHub release](../../releases/latest).
+2. Double-click to install.
+3. At the SmartScreen prompt, click **More info** → **Run anyway**. Only on first install.
 
-> The app is unsigned. Windows will only show this prompt on first run.
+### Updates
+
+The app checks for updates on launch and every few hours, downloads them in the background and asks to restart. Tray icon → **Check for Updates…** checks right away.
 
 ## Getting your API token
 
@@ -46,9 +44,9 @@ be turned off in Settings.
 
 ## Releasing (maintainers)
 
-A new release ships a `.dmg` (Apple Silicon + Intel) and a portable `.exe` to [GitHub Releases](../../releases). Two ways to cut one:
+A new release ships a signed, notarised `.dmg` + update `.zip` (Apple Silicon + Intel) and a Windows installer to [GitHub Releases](../../releases). Two ways to cut one:
 
 - **In Claude Code:** type `/release` and let the bundled skill at `.claude/skills/release/SKILL.md` discover the latest tag, bump the version, draft a changelog from commits, and run the build after you confirm. Use `/release patch`, `/release minor`, `/release major`, or `/release vX.Y.Z` to control the bump.
 - **From the shell:** run `pnpm release vX.Y.Z "release notes"`. The script (`scripts/release.sh`) tags, runs `electron-builder` for macOS + Windows, and uploads to a new GitHub Release via `gh`.
 
-Prereqs: `gh auth login`, a clean working tree, and you're on `main`.
+Prereqs: `gh auth login`, a clean working tree, you're on `main`, and your keychain holds Kumpan's Developer ID certificate plus the `PassboltBar` notarytool profile (override with `APPLE_KEYCHAIN_PROFILE`). The script checks both before tagging.
