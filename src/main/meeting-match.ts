@@ -6,6 +6,8 @@ export type MeetingHit = {
   // Stable across the churn a live call puts a window title through, so the watcher can
   // tell "same call, retitled" from "a new call started".
   key: string
+  // Only known because an app holds the microphone: no window title named the call.
+  viaMic?: boolean
 }
 
 const MEET_CODE = /\b([a-z]{3}-[a-z]{4}-[a-z]{3})\b/
@@ -73,4 +75,49 @@ export function matchMeetings(titles: readonly string[]): MeetingHit[] {
 
 export function matchMeeting(titles: readonly string[]): MeetingHit | null {
   return matchMeetings(titles)[0] ?? null
+}
+
+export function micHits(apps: readonly string[]): MeetingHit[] {
+  return apps.map((app) => ({
+    source: app,
+    title: "Using your microphone",
+    key: `mic:${app}`,
+    viaMic: true,
+  }))
+}
+
+const MIC_IN_USE_KEY = /^HKEY_\S*\\microphone\\(?:NonPackaged\\)?([^\\]+)$/i
+const REG_QWORD =
+  /^\s+(LastUsedTimeStart|LastUsedTimeStop)\s+REG_QWORD\s+(0x[0-9a-f]+)\s*$/i
+
+// Windows logs every app's microphone use under CapabilityAccessManager: an entry with
+// a start time and a zero stop time is recording right now. Desktop apps are keyed by
+// their exe path with "#" for "\", Store apps by package family name.
+export function parseWindowsMicUsers(
+  regQuery: string,
+  ownExe: string
+): string[] {
+  const own = ownExe.toLowerCase().replace(/\\/g, "#")
+  const names = new Set<string>()
+  let entry: string | null = null
+  let started = false
+  for (const line of regQuery.split(/\r?\n/)) {
+    if (line.startsWith("HKEY_")) {
+      entry = MIC_IN_USE_KEY.exec(line.trim())?.[1] ?? null
+      if (entry === "NonPackaged") entry = null
+      started = false
+      continue
+    }
+    const value = REG_QWORD.exec(line)
+    if (!entry || !value) continue
+    const zero = /^0x0+$/i.test(value[2] ?? "")
+    if (value[1] === "LastUsedTimeStart") started = !zero
+    else if (started && zero && entry.toLowerCase() !== own) {
+      const name = entry.includes("#")
+        ? (entry.split("#").pop() ?? entry).replace(/\.exe$/i, "")
+        : entry.replace(/_[a-z0-9]+$/i, "")
+      names.add(name.charAt(0).toUpperCase() + name.slice(1))
+    }
+  }
+  return [...names].sort()
 }

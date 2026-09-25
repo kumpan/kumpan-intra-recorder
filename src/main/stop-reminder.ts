@@ -62,10 +62,7 @@ export function reportAudioActivity(silent: boolean): void {
 function handleRecorderState(): void {
   if (getRecorderState().kind === "recording") {
     reset()
-    for (const hit of getLiveMeetings()) {
-      watched.add(hit.key)
-      watchedSource = hit.source
-    }
+    for (const hit of getLiveMeetings()) watch(hit)
     return
   }
   if (getBannerContext()?.kind === "stop") hideBanner()
@@ -74,12 +71,16 @@ function handleRecorderState(): void {
 
 function handleSnapshot(live: MeetingHit[]): void {
   if (getRecorderState().kind !== "recording") return
-  for (const hit of live) {
-    watched.add(hit.key)
-    watchedSource = hit.source
-  }
+  for (const hit of live) watch(hit)
   if (watched.size === 0) return
   meetingEnded = !live.some((hit) => watched.has(hit.key))
+}
+
+// A Meet call is seen both as its title and as Chrome holding the mic; the prompt should
+// name the call, not the browser.
+function watch(hit: MeetingHit): void {
+  watched.add(hit.key)
+  if (!hit.viaMic || watchedSource === null) watchedSource = hit.source
 }
 
 function evaluate(): void {

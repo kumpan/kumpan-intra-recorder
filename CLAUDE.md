@@ -49,10 +49,18 @@ Two-process Electron app, standard main/renderer split.
   matches window titles (`src/main/meeting-match.ts`). A hit floats a banner offering
   one-click record. Reuses the Screen Recording grant, so it stays silent until that grant
   exists — polling earlier would spring the OS prompt before the user ever presses Record.
+  - Titles miss browsers that don't title their window after the active tab (Search
+    does this). So the same poll also asks which apps hold the microphone:
+    `resources/mic-users`, a tiny Swift helper built from `scripts/mic-users.swift` by
+    `pnpm helper` (part of `dist:mac`), reads Core Audio's process list — no permission
+    needed, macOS 14+. Windows reads the CapabilityAccessManager registry key. A mic-only
+    hit has to hold for 30s before it nudges, only Dock apps count on macOS, and one
+    whose call a title already named stays quiet.
   - A match is reduced to a **stable key** (the Meet code, or the normalised title) so one
     call keeps one identity while its window title churns — tab switches, unread badges,
     browser-name suffixes. `src/main/meeting-tracker.ts` holds each call across a 90s
-    grace window and hands out **one banner per call**, which is what keeps the nudge
+    grace window, remembers a nudged one for 3h (tabbing away from a Meet tab for ten
+    minutes is not a new call), and hands out **one banner per call**, which is what keeps the nudge
     from reappearing every time focus moves. It is pure, so `pnpm check` covers it.
   - Stop reminders (`src/main/stop-reminder.ts`) keep the same poll running while
     recording. When every call seen during the recording has been gone past the grace

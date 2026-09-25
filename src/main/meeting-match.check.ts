@@ -1,5 +1,10 @@
 import assert from "node:assert/strict"
-import { matchMeeting, matchMeetings } from "./meeting-match.ts"
+import {
+  matchMeeting,
+  matchMeetings,
+  micHits,
+  parseWindowsMicUsers,
+} from "./meeting-match.ts"
 
 const hit = (title: string) => matchMeeting([title])
 
@@ -76,5 +81,54 @@ assert.deepEqual(
 )
 
 assert.deepEqual(matchMeetings(["Slack", "Mail"]), [])
+
+assert.deepEqual(micHits(["Search"]), [
+  {
+    source: "Search",
+    title: "Using your microphone",
+    key: "mic:Search",
+    viaMic: true,
+  },
+])
+
+{
+  const root =
+    "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone"
+  const own =
+    "C:\\Users\\per\\AppData\\Local\\Programs\\kumpan-intra-recorder\\Kumpan Intra Recorder.exe"
+  const reg = [
+    root,
+    "    Value    REG_SZ    Allow",
+    "",
+    `${root}\\MicrosoftTeams_8wekyb3d8bbwe`,
+    "    Value    REG_SZ    Allow",
+    "    LastUsedTimeStart    REG_QWORD    0x1db2c5e4a1b2c3d",
+    "    LastUsedTimeStop    REG_QWORD    0x0",
+    "",
+    `${root}\\Microsoft.WindowsSoundRecorder_8wekyb3d8bbwe`,
+    "    LastUsedTimeStart    REG_QWORD    0x1db2c5e4a1b2c3d",
+    "    LastUsedTimeStop    REG_QWORD    0x1db2c5e4a1b9999",
+    "",
+    `${root}\\NonPackaged`,
+    "    Value    REG_SZ    Allow",
+    "",
+    `${root}\\NonPackaged\\C:#Program Files#Google#Chrome#Application#chrome.exe`,
+    "    LastUsedTimeStart    REG_QWORD    0x1db2c5e4a1b2c3d",
+    "    LastUsedTimeStop    REG_QWORD    0x0",
+    "",
+    `${root}\\NonPackaged\\${own.replace(/\\/g, "#")}`,
+    "    LastUsedTimeStart    REG_QWORD    0x1db2c5e4a1b2c3d",
+    "    LastUsedTimeStop    REG_QWORD    0x0",
+    "",
+    `${root}\\NonPackaged\\C:#Tools#never_used.exe`,
+    "    LastUsedTimeStart    REG_QWORD    0x0",
+    "    LastUsedTimeStop    REG_QWORD    0x0",
+  ].join("\r\n")
+  assert.deepEqual(
+    parseWindowsMicUsers(reg, own),
+    ["Chrome", "MicrosoftTeams"],
+    "apps recording now, minus stopped, never-used and the recorder itself"
+  )
+}
 
 console.log("meeting-match: all checks passed")

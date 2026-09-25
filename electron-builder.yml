@@ -12,6 +12,7 @@ extraResources:
     to: ""
     filter:
       - trayIcon*.png
+      - mic-users
 mac:
   icon: resources/icon.png
   category: public.app-category.productivity

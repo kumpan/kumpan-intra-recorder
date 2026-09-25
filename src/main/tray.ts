@@ -13,7 +13,7 @@ import {
 
 let tray: Tray | null = null
 
-function resourcesDir(): string {
+export function resourcesDir(): string {
   return app.isPackaged ? process.resourcesPath : join(app.getAppPath(), "resources")
 }
 

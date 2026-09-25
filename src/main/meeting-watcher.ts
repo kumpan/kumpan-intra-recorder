@@ -1,10 +1,21 @@
 import { desktopCapturer, systemPreferences } from "electron"
-import { matchMeetings, type MeetingHit } from "@/main/meeting-match"
+import { execFile } from "node:child_process"
+import { join } from "node:path"
+import { promisify } from "node:util"
+import {
+  matchMeetings,
+  micHits,
+  parseWindowsMicUsers,
+  type MeetingHit,
+} from "@/main/meeting-match"
 import { createMeetingTracker } from "@/main/meeting-tracker"
 import { hideBanner, showBanner } from "@/main/banner"
 import { getRecorderState, onRecorderState } from "@/main/recorder-session"
 import { getMeetingNudge, getStopReminder } from "@/main/settings-store"
 import { startRecordingFromTray } from "@/main/recorder-controller"
+import { resourcesDir } from "@/main/tray"
+
+const execFileAsync = promisify(execFile)
 
 const POLL_MS = 12_000
 
@@ -19,7 +30,11 @@ const NUDGE_VISIBLE_MS = 45_000
 
 type SnapshotListener = (live: MeetingHit[]) => void
 
-const tracker = createMeetingTracker({ goneAfterMs: GONE_AFTER_MS })
+const tracker = createMeetingTracker({
+  goneAfterMs: GONE_AFTER_MS,
+  rememberNudgedMs: 3 * 60 * 60_000,
+  micSettleMs: 30_000,
+})
 let snapshotListeners: SnapshotListener[] = []
 let timer: ReturnType<typeof setInterval> | null = null
 let bannerKey: string | null = null
@@ -49,21 +64,49 @@ async function windowTitles(): Promise<string[]> {
   return sources.map((source) => source.name)
 }
 
+const MIC_CONSENT_KEY =
+  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone"
+
+// Browsers that don't title their window after the tab (Search, for one) are invisible
+// to title matching; an app holding the mic is the call regardless.
+async function micUsers(): Promise<string[]> {
+  if (process.platform === "win32") {
+    const { stdout } = await execFileAsync("reg", [
+      "query",
+      MIC_CONSENT_KEY,
+      "/s",
+    ])
+    return parseWindowsMicUsers(stdout, process.execPath)
+  }
+  const { stdout } = await execFileAsync(
+    join(resourcesDir(), "mic-users"),
+    [String(process.pid)],
+    { timeout: 5_000 }
+  )
+  const parsed: unknown = JSON.parse(stdout)
+  return Array.isArray(parsed)
+    ? parsed.filter((name): name is string => typeof name === "string")
+    : []
+}
+
 async function tick(): Promise<void> {
-  if (!pollingWanted() || !canReadWindowTitles()) {
+  if (!pollingWanted()) {
     hideStartBanner()
     return
   }
 
-  let titles: string[]
-  try {
-    titles = await windowTitles()
-  } catch (err) {
-    console.error("[meeting-watcher] could not read window titles", err)
-    return
-  }
+  // Either source failing (no Screen Recording grant yet, helper missing in dev) just
+  // leaves the other to carry the poll.
+  const [titles, mics] = await Promise.all([
+    canReadWindowTitles() ? windowTitles().catch(() => []) : [],
+    micUsers().catch(() => []),
+  ])
 
-  const live = tracker.update(matchMeetings(titles), Date.now())
+  const live = tracker.update(
+    [...matchMeetings(titles), ...micHits(mics)],
+    Date.now()
+  )
+  if (getRecorderState().kind !== "idle") tracker.markLiveNudged()
   for (const listener of snapshotListeners) listener(live)
 
   if (bannerKey !== null && !tracker.has(bannerKey)) hideStartBanner()
@@ -74,7 +117,7 @@ function maybeNudge(): void {
   if (bannerKey !== null) return
   if (!getMeetingNudge() || getRecorderState().kind !== "idle") return
 
-  const next = tracker.takeNudge()
+  const next = tracker.takeNudge(Date.now())
   if (!next) return
 
   bannerKey = next.key
