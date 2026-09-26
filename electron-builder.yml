@@ -48,7 +48,6 @@ win:
     - target: nsis
       arch:
         - x64
-  signAndEditExecutable: false
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
 publish:

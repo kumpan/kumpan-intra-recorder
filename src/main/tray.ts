@@ -1,7 +1,9 @@
 import { app, Tray, nativeImage, nativeTheme, screen } from "electron"
 import type { Rectangle } from "electron"
+import { execFile } from "node:child_process"
 import { existsSync } from "node:fs"
 import { join } from "node:path"
+import { promisify } from "node:util"
 import type { PanelState } from "@/shared/types"
 import { onRecorderState } from "@/main/recorder-session"
 import {
@@ -11,7 +13,14 @@ import {
   togglePanel,
 } from "@/main/panel"
 
+const execFileAsync = promisify(execFile)
+
+const PERSONALIZE_KEY =
+  "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
+const TASKBAR_RECHECK_MS = 30_000
+
 let tray: Tray | null = null
+let taskbarLight = false
 
 export function resourcesDir(): string {
   return app.isPackaged ? process.resourcesPath : join(app.getAppPath(), "resources")
@@ -33,11 +42,26 @@ function loadTrayImage(): Electron.NativeImage {
     image.setTemplateImage(true)
     return image
   }
-  const dark = nativeTheme.shouldUseDarkColors
-  const path = dark
-    ? resolveAsset("trayIcon-white.png", "trayIconTemplate.png")
-    : resolveAsset("trayIcon-black.png", "trayIconTemplate.png")
+  const path = taskbarLight
+    ? resolveAsset("trayIcon-black.png", "trayIconTemplate.png")
+    : resolveAsset("trayIcon-white.png", "trayIconTemplate.png")
   return nativeImage.createFromPath(path)
+}
+
+// The taskbar has its own light/dark setting, apart from the one apps follow (which
+// this app overrides to dark anyway), and Electron 34 doesn't expose it. A missing key
+// is a Windows 10 build from before light taskbars existed.
+async function refreshTaskbarTheme(): Promise<void> {
+  const { stdout } = await execFileAsync("reg", [
+    "query",
+    PERSONALIZE_KEY,
+    "/v",
+    "SystemUsesLightTheme",
+  ]).catch(() => ({ stdout: "" }))
+  const light = /SystemUsesLightTheme\s+REG_DWORD\s+0x1\b/i.test(stdout)
+  if (light === taskbarLight) return
+  taskbarLight = light
+  applyTrayImage()
 }
 
 function applyTrayImage(): void {
@@ -54,8 +78,11 @@ export function createTray(): void {
   onPanelState(applyTrayChrome)
   onRecorderState(() => refreshPanel())
   applyTrayChrome(panelState())
-  if (process.platform !== "darwin") {
-    nativeTheme.on("updated", () => applyTrayImage())
+  if (process.platform === "win32") {
+    void refreshTaskbarTheme()
+    // Nothing reliably announces a taskbar theme change, so look again now and then.
+    setInterval(() => void refreshTaskbarTheme(), TASKBAR_RECHECK_MS)
+    nativeTheme.on("updated", () => void refreshTaskbarTheme())
   }
 }
 
