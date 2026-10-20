@@ -111,7 +111,6 @@ type BodyProps = {
 const LANGUAGES: Array<{ value: TranscriptLanguage; label: string }> = [
   { value: "sv", label: "Svenska" },
   { value: "en", label: "English" },
-  { value: "auto", label: "Auto" },
 ]
 
 function Body({
