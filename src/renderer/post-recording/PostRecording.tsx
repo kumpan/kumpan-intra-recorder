@@ -45,7 +45,13 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
       result,
       progress: { sentBytes: 0, totalBytes: result.byteSize },
     })
-    const outcome: UploadOutcome = await window.api.handoff.upload()
+    const outcome: UploadOutcome = await window.api.handoff
+      .upload(result.sessionId)
+      .catch((err: unknown) => ({
+        ok: false as const,
+        status: 0,
+        message: err instanceof Error ? err.message : "Upload failed.",
+      }))
     if (outcome.ok) {
       setView({ kind: "uploaded", viewUrl: outcome.viewUrl })
     } else {
@@ -56,7 +62,7 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
   const onSave = async () => {
     if (view.kind !== "ready" && view.kind !== "upload-failed") return
     setView({ kind: "saving", result: view.result })
-    const outcome = await window.api.handoff.saveLocally()
+    const outcome = await window.api.handoff.saveLocally(view.result.sessionId)
     if (outcome.ok) {
       setView({ kind: "saved", path: outcome.path })
     } else if (outcome.canceled) {
@@ -71,7 +77,8 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
   }
 
   const onDiscard = async () => {
-    await window.api.handoff.discard()
+    if (view.kind !== "ready" && view.kind !== "upload-failed") return
+    await window.api.handoff.discard(view.result.sessionId)
     onClose()
   }
 

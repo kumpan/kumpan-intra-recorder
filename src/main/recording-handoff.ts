@@ -12,53 +12,57 @@ import { getBaseUrl, getToken } from "@/main/settings-store"
 import { uploadRecording } from "@/main/upload"
 import { refreshPanel } from "@/main/panel"
 
-let pending: RecordingResult | null = null
+// A queue, not a slot: a recording started (hotkey, banner) before the previous one was
+// uploaded or saved must not replace it, and an upload finishing late must clear only
+// its own recording. Every action names the session it means.
+let queue: RecordingResult[] = []
 let host: BrowserWindow | null = null
-let uploading = false
 
 export function setPending(result: RecordingResult, window: BrowserWindow): void {
-  pending = result
+  queue = [...queue, result]
   host = window
   refreshPanel()
 }
 
 export function getPending(): RecordingResult | null {
-  return pending
+  return queue[0] ?? null
 }
 
-export function isUploading(): boolean {
-  return uploading
+function find(sessionId: string): RecordingResult | null {
+  return queue.find((r) => r.sessionId === sessionId) ?? null
 }
 
-function clear(): void {
-  pending = null
-  host = null
+function clear(sessionId: string): void {
+  queue = queue.filter((r) => r.sessionId !== sessionId)
   refreshPanel()
 }
 
-export async function discardPending(): Promise<void> {
-  const current = pending
-  clear()
-  if (current) await rm(current.filePath, { force: true })
+export async function discardPending(sessionId: string): Promise<void> {
+  const current = find(sessionId)
+  if (!current) return
+  clear(sessionId)
+  await rm(current.filePath, { force: true })
 }
 
-export async function savePendingLocally(): Promise<SaveLocallyOutcome> {
-  if (!pending) return { ok: false, message: "No recording pending." }
+export async function savePendingLocally(
+  sessionId: string
+): Promise<SaveLocallyOutcome> {
+  const current = find(sessionId)
+  if (!current) return { ok: false, message: "This recording is no longer pending." }
   // Free-standing, not a sheet: the host is the small tray panel.
   const dialogResult = await dialog.showSaveDialog({
     title: "Save recording",
-    defaultPath: basename(pending.filePath),
+    defaultPath: basename(current.filePath),
     filters: [{ name: "WebM Audio", extensions: ["webm"] }],
   })
   if (dialogResult.canceled || !dialogResult.filePath) {
     return { ok: false, canceled: true }
   }
   try {
-    await copyFile(pending.filePath, dialogResult.filePath)
-    await rm(pending.filePath, { force: true })
-    const saved = dialogResult.filePath
-    clear()
-    return { ok: true, path: saved }
+    await copyFile(current.filePath, dialogResult.filePath)
+    await rm(current.filePath, { force: true })
+    clear(sessionId)
+    return { ok: true, path: dialogResult.filePath }
   } catch (err) {
     return {
       ok: false,
@@ -67,8 +71,11 @@ export async function savePendingLocally(): Promise<SaveLocallyOutcome> {
   }
 }
 
-export async function uploadPending(): Promise<UploadOutcome> {
-  if (!pending) return { ok: false, status: 0, message: "No recording pending." }
+export async function uploadPending(sessionId: string): Promise<UploadOutcome> {
+  const current = find(sessionId)
+  if (!current) {
+    return { ok: false, status: 0, message: "This recording is no longer pending." }
+  }
   const token = getToken()
   if (!token) {
     return {
@@ -78,30 +85,31 @@ export async function uploadPending(): Promise<UploadOutcome> {
     }
   }
 
-  uploading = true
   const target = host
-  const current = pending
-
-  const result = await uploadRecording({
-    baseUrl: getBaseUrl(),
-    token,
-    filePath: current.filePath,
-    durationSeconds: current.durationSeconds,
-    startedAt: current.startedAt,
-    endedAt: current.endedAt,
-    onProgress: (p: UploadProgress) => {
-      if (target && !target.isDestroyed()) {
-        target.webContents.send(IpcChannel.HandoffUploadProgress, p)
-      }
-    },
-  })
-
-  uploading = false
-
-  if (result.ok) {
-    await rm(current.filePath, { force: true })
-    clear()
+  try {
+    const result = await uploadRecording({
+      baseUrl: getBaseUrl(),
+      token,
+      filePath: current.filePath,
+      durationSeconds: current.durationSeconds,
+      startedAt: current.startedAt,
+      endedAt: current.endedAt,
+      onProgress: (p: UploadProgress) => {
+        if (target && !target.isDestroyed()) {
+          target.webContents.send(IpcChannel.HandoffUploadProgress, p)
+        }
+      },
+    })
+    if (result.ok) {
+      await rm(current.filePath, { force: true })
+      clear(sessionId)
+    }
+    return result
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: err instanceof Error ? err.message : "Upload failed.",
+    }
   }
-
-  return result
 }

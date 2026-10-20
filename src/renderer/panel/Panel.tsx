@@ -8,7 +8,7 @@ const isMac = /Mac/.test(navigator.platform)
 
 export function Panel() {
   const [state, setState] = useState<PanelState | null>(null)
-  const [handoffOpen, setHandoffOpen] = useState(false)
+  const [handoffId, setHandoffId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
@@ -17,12 +17,16 @@ export function Panel() {
     return window.api.panel.onState(setState)
   }, [])
 
-  // The handoff opens with a new recording and stays after Upload / Save clears it
+  // The handoff opens on a finished recording and stays after Upload / Save clears it
   // in main, so the outcome ("Open in intra") is still there until the user closes it.
-  const pendingId = state?.pending?.sessionId
+  // A new recording (hotkey, banner) drops it: the last outcome must never stand in
+  // for a recording in progress or the one after it.
+  const pendingId = state?.pending?.sessionId ?? null
+  const recorderKind = state?.recorder.kind
   useEffect(() => {
-    if (pendingId) setHandoffOpen(true)
-  }, [pendingId])
+    if (recorderKind !== "idle") setHandoffId(null)
+    else if (pendingId && !handoffId) setHandoffId(pendingId)
+  }, [recorderKind, pendingId, handoffId])
 
   // Reopened from the tray, the panel starts on the recorder, not wherever it was left.
   useEffect(() => {
@@ -84,8 +88,8 @@ export function Panel() {
           </header>
           {settingsOpen ? (
             <Settings />
-          ) : handoffOpen ? (
-            <PostRecording onClose={() => setHandoffOpen(false)} />
+          ) : handoffId ? (
+            <PostRecording key={handoffId} onClose={() => setHandoffId(null)} />
           ) : (
             <RecordButton recorder={state.recorder} hotkey={state.hotkey} />
           )}

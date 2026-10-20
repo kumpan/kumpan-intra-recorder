@@ -157,19 +157,24 @@ export function registerIpcHandlers(): void {
     return getPending()
   })
 
-  ipcMain.handle(IpcChannel.HandoffUpload, async (): Promise<UploadOutcome> => {
-    return uploadPending()
-  })
+  ipcMain.handle(
+    IpcChannel.HandoffUpload,
+    async (_event, sessionId: string): Promise<UploadOutcome> =>
+      uploadPending(sessionId)
+  )
 
   ipcMain.handle(
     IpcChannel.HandoffSaveLocally,
-    async (): Promise<SaveLocallyOutcome> =>
-      whilePanelPinned(() => savePendingLocally())
+    async (_event, sessionId: string): Promise<SaveLocallyOutcome> =>
+      whilePanelPinned(() => savePendingLocally(sessionId))
   )
 
-  ipcMain.handle(IpcChannel.HandoffDiscard, async (): Promise<void> => {
-    await discardPending()
-  })
+  ipcMain.handle(
+    IpcChannel.HandoffDiscard,
+    async (_event, sessionId: string): Promise<void> => {
+      await discardPending(sessionId)
+    }
+  )
 
   ipcMain.handle(IpcChannel.PanelGetState, (): PanelState => panelState())
 

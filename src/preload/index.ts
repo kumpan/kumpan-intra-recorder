@@ -83,11 +83,12 @@ const api = {
   handoff: {
     getPending: (): Promise<RecordingResult | null> =>
       ipcRenderer.invoke(IpcChannel.HandoffGetPending),
-    upload: (): Promise<UploadOutcome> =>
-      ipcRenderer.invoke(IpcChannel.HandoffUpload),
-    saveLocally: (): Promise<SaveLocallyOutcome> =>
-      ipcRenderer.invoke(IpcChannel.HandoffSaveLocally),
-    discard: (): Promise<void> => ipcRenderer.invoke(IpcChannel.HandoffDiscard),
+    upload: (sessionId: string): Promise<UploadOutcome> =>
+      ipcRenderer.invoke(IpcChannel.HandoffUpload, sessionId),
+    saveLocally: (sessionId: string): Promise<SaveLocallyOutcome> =>
+      ipcRenderer.invoke(IpcChannel.HandoffSaveLocally, sessionId),
+    discard: (sessionId: string): Promise<void> =>
+      ipcRenderer.invoke(IpcChannel.HandoffDiscard, sessionId),
     onUploadProgress: (cb: (p: UploadProgress) => void): (() => void) => {
       const listener = (_e: Electron.IpcRendererEvent, p: UploadProgress) =>
         cb(p)
