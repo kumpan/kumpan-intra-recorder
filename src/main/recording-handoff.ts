@@ -5,10 +5,15 @@ import { IpcChannel } from "@/shared/ipc"
 import type {
   RecordingResult,
   SaveLocallyOutcome,
+  TranscriptLanguage,
   UploadOutcome,
   UploadProgress,
 } from "@/shared/types"
-import { getBaseUrl, getToken } from "@/main/settings-store"
+import {
+  getBaseUrl,
+  getToken,
+  updateTranscriptLanguage,
+} from "@/main/settings-store"
 import { uploadRecording } from "@/main/upload"
 import { refreshPanel } from "@/main/panel"
 
@@ -71,7 +76,10 @@ export async function savePendingLocally(
   }
 }
 
-export async function uploadPending(sessionId: string): Promise<UploadOutcome> {
+export async function uploadPending(
+  sessionId: string,
+  language: TranscriptLanguage
+): Promise<UploadOutcome> {
   const current = find(sessionId)
   if (!current) {
     return { ok: false, status: 0, message: "This recording is no longer pending." }
@@ -85,6 +93,8 @@ export async function uploadPending(sessionId: string): Promise<UploadOutcome> {
     }
   }
 
+  // The choice becomes the default for the next recording.
+  await updateTranscriptLanguage(language)
   const target = host
   try {
     const result = await uploadRecording({
@@ -94,6 +104,7 @@ export async function uploadPending(sessionId: string): Promise<UploadOutcome> {
       durationSeconds: current.durationSeconds,
       startedAt: current.startedAt,
       endedAt: current.endedAt,
+      language,
       onProgress: (p: UploadProgress) => {
         if (target && !target.isDestroyed()) {
           target.webContents.send(IpcChannel.HandoffUploadProgress, p)

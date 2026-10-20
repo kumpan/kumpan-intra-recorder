@@ -13,6 +13,7 @@ import type {
   Settings,
   SettingsUpdate,
   TokenTestResult,
+  TranscriptLanguage,
   UploadOutcome,
   UploadProgress,
 } from "@/shared/types"
@@ -83,8 +84,11 @@ const api = {
   handoff: {
     getPending: (): Promise<RecordingResult | null> =>
       ipcRenderer.invoke(IpcChannel.HandoffGetPending),
-    upload: (sessionId: string): Promise<UploadOutcome> =>
-      ipcRenderer.invoke(IpcChannel.HandoffUpload, sessionId),
+    upload: (
+      sessionId: string,
+      language: TranscriptLanguage
+    ): Promise<UploadOutcome> =>
+      ipcRenderer.invoke(IpcChannel.HandoffUpload, sessionId, language),
     saveLocally: (sessionId: string): Promise<SaveLocallyOutcome> =>
       ipcRenderer.invoke(IpcChannel.HandoffSaveLocally, sessionId),
     discard: (sessionId: string): Promise<void> =>

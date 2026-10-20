@@ -1,3 +1,7 @@
+// What intra transcribes the recording as. "auto" lets the transcriber guess, which
+// mishears Swedish salted with English terms often enough to be worth choosing.
+export type TranscriptLanguage = "sv" | "en" | "auto"
+
 export type Settings = {
   baseUrl: string
   hasToken: boolean
@@ -5,6 +9,7 @@ export type Settings = {
   hotkeyDefault: string
   meetingNudge: boolean
   stopReminder: boolean
+  transcriptLanguage: TranscriptLanguage
 }
 
 export type SettingsUpdate = {

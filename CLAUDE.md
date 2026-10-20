@@ -81,7 +81,8 @@ Two-process Electron app, standard main/renderer split.
   - `MediaRecorder` encodes to `audio/webm; codecs=opus`, ~0.5 MB/min. Chunks streamed to main via IPC, appended to tmp file.
   - An `AnalyserNode` taps the same mix to measure RMS once a second. Only the renderer can see the audio, so it reports "quiet" / "not quiet" to main; main decides how much quiet is worth interrupting for.
 - Settings, as a view inside the tray panel (⚙)
-- Tray panel, including the post-recording choice (Upload / Save locally / Discard)
+- Tray panel, including the post-recording choice (Upload / Save locally / Discard) and
+  the spoken language sent with the upload (remembered as the next default)
 
 **Preload** (`src/preload/`)
 
@@ -125,6 +126,7 @@ Fields:
   duration:  <seconds, integer>
   startedAt: <ISO timestamp>
   endedAt:   <ISO timestamp>
+  language:  "sv" | "en" | "auto"   (picked before upload; "auto" = intra auto-detects)
 
 200 → { id: string, viewUrl: string }
 401 → invalid token

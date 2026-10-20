@@ -175,6 +175,28 @@ button.link:hover:not(:disabled) {
   overflow-wrap: anywhere;
 }
 
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.segmented button {
+  flex: 1;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.segmented button.segmented__on {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
 .handoff__actions {
   display: flex;
   flex-direction: column;

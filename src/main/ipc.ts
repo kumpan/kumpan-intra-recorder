@@ -24,6 +24,8 @@ import {
   hasToken,
   updateBaseUrl,
   getStopReminder,
+  getTranscriptLanguage,
+  isTranscriptLanguage,
   updateMeetingNudge,
   updateStopReminder,
   updateToken,
@@ -60,6 +62,7 @@ export function registerIpcHandlers(): void {
     hotkeyDefault: DEFAULT_HOTKEY,
     meetingNudge: getMeetingNudge(),
     stopReminder: getStopReminder(),
+    transcriptLanguage: getTranscriptLanguage(),
   })
 
   ipcMain.handle(IpcChannel.GetSettings, (): Settings => snapshot())
@@ -159,8 +162,8 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IpcChannel.HandoffUpload,
-    async (_event, sessionId: string): Promise<UploadOutcome> =>
-      uploadPending(sessionId)
+    async (_event, sessionId: string, language: unknown): Promise<UploadOutcome> =>
+      uploadPending(sessionId, isTranscriptLanguage(language) ? language : "auto")
   )
 
   ipcMain.handle(

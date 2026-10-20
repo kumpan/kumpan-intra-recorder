@@ -4,7 +4,11 @@ import { Readable, Transform } from "node:stream"
 import { request as httpsRequest } from "node:https"
 import { request as httpRequest } from "node:http"
 import { randomBytes } from "node:crypto"
-import type { UploadOutcome, UploadProgress } from "@/shared/types"
+import type {
+  TranscriptLanguage,
+  UploadOutcome,
+  UploadProgress,
+} from "@/shared/types"
 
 type UploadParams = {
   baseUrl: string
@@ -13,12 +17,15 @@ type UploadParams = {
   durationSeconds: number
   startedAt: string
   endedAt: string
+  language: TranscriptLanguage
   onProgress: (p: UploadProgress) => void
 }
 
 const UPLOAD_PATH = "/api/transcripts/upload"
 
-export async function uploadRecording(params: UploadParams): Promise<UploadOutcome> {
+export async function uploadRecording(
+  params: UploadParams
+): Promise<UploadOutcome> {
   const url = new URL(`${params.baseUrl}${UPLOAD_PATH}`)
   const isHttps = url.protocol === "https:"
   const boundary = `----kumpan-${randomBytes(16).toString("hex")}`
@@ -36,6 +43,7 @@ export async function uploadRecording(params: UploadParams): Promise<UploadOutco
     fieldPart("duration", String(params.durationSeconds)) +
     fieldPart("startedAt", params.startedAt) +
     fieldPart("endedAt", params.endedAt) +
+    fieldPart("language", params.language) +
     `--${boundary}--\r\n`
 
   const fileHeaderBuf = Buffer.from(fileHeader, "utf8")
@@ -103,16 +111,32 @@ function interpretResponse(status: number, raw: string): UploadOutcome {
       if (typeof parsed.id === "string" && typeof parsed.viewUrl === "string") {
         return { ok: true, status, id: parsed.id, viewUrl: parsed.viewUrl }
       }
-      return { ok: false, status, message: "Unexpected response body from intra." }
+      return {
+        ok: false,
+        status,
+        message: "Unexpected response body from intra.",
+      }
     } catch {
       return { ok: false, status, message: "Invalid JSON in intra response." }
     }
   }
   if (status === 401) {
-    return { ok: false, status, message: "Token rejected. Update it in Settings." }
+    return {
+      ok: false,
+      status,
+      message: "Token rejected. Update it in Settings.",
+    }
   }
   if (status === 413) {
-    return { ok: false, status, message: "Recording exceeds the 200 MB upload limit." }
+    return {
+      ok: false,
+      status,
+      message: "Recording exceeds the 200 MB upload limit.",
+    }
   }
-  return { ok: false, status, message: `Upload failed (${status || "network error"}).` }
+  return {
+    ok: false,
+    status,
+    message: `Upload failed (${status || "network error"}).`,
+  }
 }

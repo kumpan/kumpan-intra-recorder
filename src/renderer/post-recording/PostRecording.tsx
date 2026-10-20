@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import type {
   RecordingResult,
+  TranscriptLanguage,
   UploadOutcome,
   UploadProgress,
 } from "@/shared/types"
@@ -17,8 +18,12 @@ type View =
 
 export function PostRecording({ onClose }: { onClose: () => void }) {
   const [view, setView] = useState<View>({ kind: "loading" })
+  const [language, setLanguage] = useState<TranscriptLanguage>("sv")
 
   useEffect(() => {
+    void window.api
+      .getSettings()
+      .then((s) => setLanguage(s.transcriptLanguage))
     window.api.handoff.getPending().then((result) => {
       if (!result) {
         setView({ kind: "discarded" })
@@ -46,7 +51,7 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
       progress: { sentBytes: 0, totalBytes: result.byteSize },
     })
     const outcome: UploadOutcome = await window.api.handoff
-      .upload(result.sessionId)
+      .upload(result.sessionId, language)
       .catch((err: unknown) => ({
         ok: false as const,
         status: 0,
@@ -84,20 +89,44 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
 
   return (
     <section className="handoff">
-      <Body view={view} onUpload={onUpload} onSave={onSave} onDiscard={onDiscard} onClose={onClose} />
+      <Body
+        view={view}
+        language={language}
+        onLanguage={setLanguage}
+        onUpload={onUpload}
+        onSave={onSave}
+        onDiscard={onDiscard}
+        onClose={onClose}
+      />
     </section>
   )
 }
 
 type BodyProps = {
   view: View
+  language: TranscriptLanguage
+  onLanguage: (language: TranscriptLanguage) => void
   onUpload: () => void
   onSave: () => void
   onDiscard: () => void
   onClose: () => void
 }
 
-function Body({ view, onUpload, onSave, onDiscard, onClose }: BodyProps) {
+const LANGUAGES: Array<{ value: TranscriptLanguage; label: string }> = [
+  { value: "sv", label: "Svenska" },
+  { value: "en", label: "English" },
+  { value: "auto", label: "Auto" },
+]
+
+function Body({
+  view,
+  language,
+  onLanguage,
+  onUpload,
+  onSave,
+  onDiscard,
+  onClose,
+}: BodyProps) {
   switch (view.kind) {
     case "loading":
       return <p className="status">Loading…</p>
@@ -113,6 +142,20 @@ function Body({ view, onUpload, onSave, onDiscard, onClose }: BodyProps) {
           {view.kind === "upload-failed" && (
             <p className="status status--error">{view.message}</p>
           )}
+          <div className="segmented" role="radiogroup" aria-label="Spoken language">
+            {LANGUAGES.map((l) => (
+              <button
+                key={l.value}
+                type="button"
+                role="radio"
+                aria-checked={language === l.value}
+                className={language === l.value ? "segmented__on" : undefined}
+                onClick={() => onLanguage(l.value)}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
           <div className="handoff__actions">
             <button type="button" className="primary" onClick={onUpload}>
               {view.kind === "upload-failed" ? "Retry upload" : "Upload to intra"}

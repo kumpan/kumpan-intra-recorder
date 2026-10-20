@@ -2,6 +2,7 @@ import { app, safeStorage } from "electron"
 import { readFile, writeFile, mkdir } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { dirname, join } from "node:path"
+import type { TranscriptLanguage } from "@/shared/types"
 
 const DEFAULT_BASE_URL = "https://intra.kumpan.se"
 
@@ -15,6 +16,7 @@ type PersistedSettings = {
   lastLaunchedVersion: string | null
   meetingNudge: boolean
   stopReminder: boolean
+  transcriptLanguage: TranscriptLanguage
 }
 
 const state: PersistedSettings = {
@@ -24,6 +26,7 @@ const state: PersistedSettings = {
   lastLaunchedVersion: null,
   meetingNudge: true,
   stopReminder: true,
+  transcriptLanguage: "sv",
 }
 
 let loaded = false
@@ -40,6 +43,7 @@ async function persist(): Promise<void> {
     lastLaunchedVersion: state.lastLaunchedVersion,
     meetingNudge: state.meetingNudge,
     stopReminder: state.stopReminder,
+    transcriptLanguage: state.transcriptLanguage,
   }
   const json = JSON.stringify(payload)
   const path = settingsPath()
@@ -89,6 +93,9 @@ export async function loadSettings(): Promise<void> {
     }
     if (typeof parsed.stopReminder === "boolean") {
       state.stopReminder = parsed.stopReminder
+    }
+    if (isTranscriptLanguage(parsed.transcriptLanguage)) {
+      state.transcriptLanguage = parsed.transcriptLanguage
     }
   } catch (err) {
     console.error("[settings] failed to load, falling back to defaults", err)
@@ -161,5 +168,23 @@ export function getLastLaunchedVersion(): string | null {
 export async function updateLastLaunchedVersion(value: string): Promise<void> {
   if (state.lastLaunchedVersion === value) return
   state.lastLaunchedVersion = value
+  await persist()
+}
+
+export function isTranscriptLanguage(
+  value: unknown
+): value is TranscriptLanguage {
+  return value === "sv" || value === "en" || value === "auto"
+}
+
+export function getTranscriptLanguage(): TranscriptLanguage {
+  return state.transcriptLanguage
+}
+
+export async function updateTranscriptLanguage(
+  value: TranscriptLanguage
+): Promise<void> {
+  if (state.transcriptLanguage === value) return
+  state.transcriptLanguage = value
   await persist()
 }
