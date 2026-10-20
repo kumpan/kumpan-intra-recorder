@@ -1,214 +1,285 @@
 import { useEffect, useState } from "react"
+import type { UpdateState } from "@/shared/types"
 import { HotkeyField } from "@/renderer/components/HotkeyField"
 
-type Status =
+type Connection =
   | { kind: "idle" }
-  | { kind: "saving" }
-  | { kind: "saved" }
   | { kind: "testing" }
-  | { kind: "ok"; message: string }
+  | { kind: "ok" }
   | { kind: "error"; message: string }
 
-export function Settings() {
+const isMac = /Mac|iPhone|iPad/.test(navigator.platform)
+
+export function Settings({
+  version,
+  update,
+}: {
+  version: string
+  update: UpdateState
+}) {
   const [baseUrl, setBaseUrl] = useState("")
+  const [savedBaseUrl, setSavedBaseUrl] = useState("")
   const [token, setToken] = useState("")
-  const [hasSavedToken, setHasSavedToken] = useState(false)
+  const [hasToken, setHasToken] = useState(false)
   const [hotkey, setHotkey] = useState("")
   const [hotkeyDefault, setHotkeyDefault] = useState("")
   const [meetingNudge, setMeetingNudge] = useState(true)
   const [stopReminder, setStopReminder] = useState(true)
-  const [status, setStatus] = useState<Status>({ kind: "idle" })
+  const [connection, setConnection] = useState<Connection>({ kind: "idle" })
 
-  useEffect(() => {
-    let cancelled = false
-    window.api.getSettings().then((s) => {
-      if (cancelled) return
-      setBaseUrl(s.baseUrl)
-      setHasSavedToken(s.hasToken)
-      setHotkey(s.hotkey)
-      setHotkeyDefault(s.hotkeyDefault)
-      setMeetingNudge(s.meetingNudge)
-      setStopReminder(s.stopReminder)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const onHotkeyChange = async (next: string) => {
-    const updated = await window.api.setSettings({ hotkey: next })
-    setHotkey(updated.hotkey)
+  const test = async () => {
+    setConnection({ kind: "testing" })
+    const result = await window.api.testToken()
+    setConnection(
+      result.ok ? { kind: "ok" } : { kind: "error", message: result.message }
+    )
   }
 
-  const onMeetingNudgeChange = async (next: boolean) => {
-    setMeetingNudge(next)
-    const updated = await window.api.setSettings({ meetingNudge: next })
-    setMeetingNudge(updated.meetingNudge)
-  }
-
-  const onStopReminderChange = async (next: boolean) => {
-    setStopReminder(next)
-    const updated = await window.api.setSettings({ stopReminder: next })
-    setStopReminder(updated.stopReminder)
-  }
-
-  const onSave = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setStatus({ kind: "saving" })
+  // Each change saves on its own, as in System Settings: there is no Save button to
+  // forget. A saved token is checked straight away so a bad paste shows up here, not
+  // on the first upload.
+  const save = async (patch: Parameters<typeof window.api.setSettings>[0]) => {
     try {
-      const next = await window.api.setSettings({
-        baseUrl,
-        token: token.length > 0 ? token : undefined,
-      })
-      setHasSavedToken(next.hasToken)
-      setToken("")
-      setStatus({ kind: "saved" })
+      const next = await window.api.setSettings(patch)
+      setBaseUrl(next.baseUrl)
+      setSavedBaseUrl(next.baseUrl)
+      setHasToken(next.hasToken)
+      setMeetingNudge(next.meetingNudge)
+      setStopReminder(next.stopReminder)
+      if (next.hasToken && ("token" in patch || "baseUrl" in patch)) void test()
+      if (!next.hasToken) setConnection({ kind: "idle" })
     } catch (err) {
-      setStatus({
+      setConnection({
         kind: "error",
         message: err instanceof Error ? err.message : "Failed to save.",
       })
     }
   }
 
-  const onClearToken = async () => {
-    setStatus({ kind: "saving" })
-    try {
-      const next = await window.api.setSettings({ token: null })
-      setHasSavedToken(next.hasToken)
-      setStatus({ kind: "saved" })
-    } catch (err) {
-      setStatus({
-        kind: "error",
-        message: err instanceof Error ? err.message : "Failed to clear token.",
-      })
+  useEffect(() => {
+    let cancelled = false
+    window.api.getSettings().then((s) => {
+      if (cancelled) return
+      setBaseUrl(s.baseUrl)
+      setSavedBaseUrl(s.baseUrl)
+      setHasToken(s.hasToken)
+      setHotkey(s.hotkey)
+      setHotkeyDefault(s.hotkeyDefault)
+      setMeetingNudge(s.meetingNudge)
+      setStopReminder(s.stopReminder)
+      if (s.hasToken) void test()
+    })
+    return () => {
+      cancelled = true
     }
-  }
+  }, [])
 
-  const onTest = async () => {
-    setStatus({ kind: "testing" })
-    const result = await window.api.testToken()
-    if (result.ok) {
-      setStatus({ kind: "ok", message: "Token looks valid." })
-    } else {
-      setStatus({ kind: "error", message: result.message })
-    }
+  const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") e.currentTarget.blur()
   }
 
   return (
-    <form className="settings" onSubmit={onSave}>
-      <div className="field">
-        <span>Start/stop hotkey</span>
-        <HotkeyField
-          value={hotkey}
-          defaultValue={hotkeyDefault}
-          onChange={onHotkeyChange}
-        />
-      </div>
+    <>
+      <section className="section">
+        <h2 className="section__title">Updates</h2>
+        <div className="group">
+          <div className="row">
+            <span className="row__label">Version</span>
+            <span
+              className={`row__value${update.kind === "error" ? " row__value--error" : ""}`}
+              title={update.kind === "error" ? update.message : undefined}
+            >
+              {updateLabel(update, version)}
+            </span>
+            <button
+              type="button"
+              className="btn"
+              disabled={
+                update.kind !== "idle" &&
+                update.kind !== "latest" &&
+                update.kind !== "error"
+              }
+              onClick={() => void window.api.panel.checkForUpdates()}
+            >
+              Check for Updates
+            </button>
+          </div>
+        </div>
+      </section>
 
-      <label className="toggle">
-        <input
-          type="checkbox"
-          checked={meetingNudge}
-          onChange={(e) => void onMeetingNudgeChange(e.target.checked)}
-        />
-        <span>Offer to record when a call is detected</span>
-      </label>
+      <section className="section">
+        <h2 className="section__title">Recording</h2>
+        <div className="group">
+          <HotkeyField
+            value={hotkey}
+            defaultValue={hotkeyDefault}
+            onChange={async (next) => {
+              const updated = await window.api.setSettings({ hotkey: next })
+              setHotkey(updated.hotkey)
+            }}
+          />
+          <label className="row">
+            <span className="row__label">Offer to record calls</span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={meetingNudge}
+              onChange={(e) => {
+                setMeetingNudge(e.target.checked)
+                void save({ meetingNudge: e.target.checked })
+              }}
+            />
+          </label>
+          <label className="row">
+            <span className="row__label">Remind me to stop</span>
+            <input
+              type="checkbox"
+              role="switch"
+              className="switch"
+              checked={stopReminder}
+              onChange={(e) => {
+                setStopReminder(e.target.checked)
+                void save({ stopReminder: e.target.checked })
+              }}
+            />
+          </label>
+        </div>
+        <p className="caption">
+          For Google Meet and Zoom. Nothing records without a click.
+        </p>
+      </section>
 
-      <label className="toggle">
-        <input
-          type="checkbox"
-          checked={stopReminder}
-          onChange={(e) => void onStopReminderChange(e.target.checked)}
-        />
-        <span>Remind me to stop when the call ends or goes quiet</span>
-      </label>
+      <section className="section">
+        <h2 className="section__title">Intra</h2>
+        <div className="group">
+          <div className="row">
+            <span className="row__label">Server</span>
+            <input
+              type="url"
+              className="inline-input"
+              value={baseUrl}
+              placeholder="https://intra.kumpan.se"
+              spellCheck={false}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              onKeyDown={blurOnEnter}
+              onBlur={() => {
+                if (baseUrl !== savedBaseUrl) void save({ baseUrl })
+              }}
+            />
+          </div>
+          <div className="row">
+            <span className="row__label">API token</span>
+            {hasToken ? (
+              <>
+                <span className="row__value">Saved</span>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => void save({ token: null })}
+                >
+                  Remove
+                </button>
+              </>
+            ) : (
+              <input
+                type="password"
+                className="inline-input"
+                value={token}
+                placeholder="Paste token"
+                autoComplete="off"
+                onChange={(e) => setToken(e.target.value)}
+                onKeyDown={blurOnEnter}
+                onBlur={() => {
+                  if (token.length === 0) return
+                  setToken("")
+                  void save({ token })
+                }}
+              />
+            )}
+          </div>
+          <div className="row">
+            <span className="row__label">Status</span>
+            <ConnectionValue connection={connection} hasToken={hasToken} />
+            <button
+              type="button"
+              className="btn"
+              disabled={!hasToken || connection.kind === "testing"}
+              onClick={() => void test()}
+            >
+              Test
+            </button>
+          </div>
+        </div>
+        <p className="caption">Create a token in intra's settings.</p>
+      </section>
 
-      <label className="field">
-        <span>Intra base URL</span>
-        <input
-          type="url"
-          value={baseUrl}
-          onChange={(e) => setBaseUrl(e.target.value)}
-          placeholder="https://intra.kumpan.se"
-          required
-        />
-      </label>
-
-      <label className="field">
-        <span>Intra API token</span>
-        <input
-          type="password"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          placeholder={hasSavedToken ? "•••••••• (saved)" : "Paste your token"}
-          autoComplete="off"
-        />
-        {hasSavedToken && (
-          <button type="button" className="link" onClick={onClearToken}>
-            Clear saved token
-          </button>
-        )}
-      </label>
-
-      <div className="actions">
-        <button type="submit">Save</button>
-        <button
-          type="button"
-          onClick={onTest}
-          disabled={!hasSavedToken && token.length === 0}
-        >
-          Test connection
-        </button>
-      </div>
-
-      <StatusLine status={status} />
-
-      <TroubleshootingSection />
-    </form>
+      {isMac && (
+        <section className="section">
+          <h2 className="section__title">Troubleshooting</h2>
+          <div className="group">
+            <div className="row">
+              <span className="row__label">Screen Recording</span>
+              <button
+                type="button"
+                className="btn btn--danger"
+                onClick={() => void window.api.resetScreenRecording()}
+              >
+                Reset…
+              </button>
+            </div>
+          </div>
+          <p className="caption">
+            If macOS keeps refusing to record with the permission on, reset it,
+            reopen the app and allow it again.
+          </p>
+        </section>
+      )}
+    </>
   )
 }
 
-function TroubleshootingSection() {
-  const isMac =
-    typeof navigator !== "undefined" &&
-    /Mac|iPhone|iPad/.test(navigator.platform)
-  if (!isMac) return null
-  return (
-    <section className="troubleshoot">
-      <h2>Recording not working?</h2>
-      <p>
-        If macOS keeps refusing to record even though Screen Recording is on —
-        most often after upgrading from an old unsigned version — click the
-        button below to clear the stale permission entry, then reopen the app
-        and grant fresh permission when macOS asks.
-      </p>
-      <button
-        type="button"
-        className="danger"
-        onClick={() => {
-          void window.api.resetScreenRecording()
-        }}
-      >
-        Reset Screen Recording permission…
-      </button>
-    </section>
-  )
-}
-
-function StatusLine({ status }: { status: Status }) {
-  switch (status.kind) {
-    case "idle":
-      return null
-    case "saving":
-      return <p className="status">Saving…</p>
-    case "saved":
-      return <p className="status status--ok">Saved.</p>
-    case "testing":
-      return <p className="status">Testing…</p>
-    case "ok":
-      return <p className="status status--ok">{status.message}</p>
+function updateLabel(update: UpdateState, version: string): string {
+  switch (update.kind) {
+    case "checking":
+      return "Checking…"
+    case "downloading":
+      return `Downloading ${update.version}…`
+    case "ready":
+      return `${update.version} ready`
     case "error":
-      return <p className="status status--error">{status.message}</p>
+      return "Check failed"
+    case "latest":
+      return `${version} · Latest`
+    case "idle":
+      return version
+  }
+}
+
+function ConnectionValue({
+  connection,
+  hasToken,
+}: {
+  connection: Connection
+  hasToken: boolean
+}) {
+  if (!hasToken && connection.kind !== "error")
+    return <span className="row__value">No token</span>
+  switch (connection.kind) {
+    case "idle":
+      return <span className="row__value">Not checked</span>
+    case "testing":
+      return <span className="row__value">Checking…</span>
+    case "ok":
+      return <span className="row__value row__value--ok">● Connected</span>
+    case "error":
+      return (
+        <span
+          className="row__value row__value--error"
+          title={connection.message}
+        >
+          {connection.message}
+        </span>
+      )
   }
 }

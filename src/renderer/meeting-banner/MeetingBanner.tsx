@@ -1,39 +1,44 @@
 import { useEffect, useState } from "react"
 import type { MeetingBannerContext } from "@/shared/types"
+import {
+  CloseIcon,
+  RecordIcon,
+  StopIcon,
+  VideoIcon,
+} from "@/renderer/components/icons"
 
 type Copy = {
-  heading: string
+  eyebrow: string
+  title: string
   detail: string
   primary: string
   busy: string
-  secondary: string
+  // Only the stop prompt gets a labelled way out: "Keep recording" says what dismissing
+  // it means, where the start prompt's × already does.
+  secondary: string | null
 }
 
 function copyFor(context: MeetingBannerContext | null): Copy {
-  if (context === null) {
+  if (context === null || context.kind === "start") {
     return {
-      heading: "Meeting detected",
-      detail: "",
+      eyebrow: context ? `${context.source} call detected` : "Call detected",
+      title: context?.title || "Meeting in progress",
+      detail: "Record it to send the conversation to intra",
       primary: "Record",
       busy: "Starting…",
-      secondary: "Not now",
-    }
-  }
-  if (context.kind === "start") {
-    return {
-      heading: `${context.source} call detected`,
-      detail: context.title,
-      primary: "Record",
-      busy: "Starting…",
-      secondary: "Not now",
+      secondary: null,
     }
   }
   return {
-    heading: "Still recording",
-    detail:
+    eyebrow:
       context.reason === "meeting-ended"
-        ? `The ${context.source} call ended — stop and save?`
-        : `No one has spoken for ${context.quietMinutes} minutes — stop and save?`,
+        ? `Still recording · ${context.source}`
+        : "Still recording",
+    title:
+      context.reason === "meeting-ended"
+        ? "The call ended"
+        : `Quiet for ${context.quietMinutes} minutes`,
+    detail: "Stop to upload or save the recording",
     primary: "Stop",
     busy: "Stopping…",
     secondary: "Keep recording",
@@ -63,38 +68,50 @@ export function MeetingBanner() {
 
   const copy = copyFor(context)
   const recording = context?.kind === "stop"
-
-  const onPrimary = () => {
-    setBusy(true)
-    void window.api.meeting.accept()
-  }
+  const dismiss = () => void window.api.meeting.dismiss()
 
   return (
     <div className="banner">
       <span
-        className={`banner__dot${recording ? " banner__dot--live" : ""}`}
+        className={`banner__icon${recording ? " banner__icon--live" : ""}`}
         aria-hidden="true"
-      />
+      >
+        {recording ? <StopIcon size={22} /> : <VideoIcon size={22} />}
+      </span>
       <div className="banner__text">
-        <strong>{copy.heading}</strong>
-        <span title={copy.detail}>{copy.detail}</span>
+        <small>{copy.eyebrow}</small>
+        <strong title={copy.title}>{copy.title}</strong>
+        <small>{copy.detail}</small>
       </div>
       <div className="banner__actions">
+        {copy.secondary && (
+          <button type="button" className="btn btn--large" onClick={dismiss}>
+            {copy.secondary}
+          </button>
+        )}
         <button
           type="button"
-          className="primary"
-          onClick={onPrimary}
+          className={`btn btn--large btn--primary${recording ? " btn--stop" : ""}`}
           disabled={busy}
+          onClick={() => {
+            setBusy(true)
+            void window.api.meeting.accept()
+          }}
         >
+          {recording ? <StopIcon size={14} /> : <RecordIcon size={14} />}
           {busy ? copy.busy : copy.primary}
         </button>
-        <button
-          type="button"
-          className="link"
-          onClick={() => void window.api.meeting.dismiss()}
-        >
-          {copy.secondary}
-        </button>
+        {!copy.secondary && (
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label="Not now"
+            title="Not now"
+            onClick={dismiss}
+          >
+            <CloseIcon size={16} />
+          </button>
+        )}
       </div>
     </div>
   )

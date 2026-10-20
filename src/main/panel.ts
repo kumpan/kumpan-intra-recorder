@@ -1,23 +1,19 @@
 import { app, BrowserWindow, screen, shell } from "electron"
 import { IpcChannel } from "@/shared/ipc"
 import type { PanelState } from "@/shared/types"
-import { loadView, preloadPath } from "@/main/windows"
+import { applyGlass, loadView, preloadPath } from "@/main/windows"
 import { getRecorderState } from "@/main/recorder-session"
 import { getPending } from "@/main/recording-handoff"
 import { getUpdateState } from "@/main/updater"
 import { getHotkey } from "@/main/settings-store"
 import { getTrayBounds } from "@/main/tray"
 
-const WIDTH = 320
+const WIDTH = 340
 const RADIUS = 16
 const GAP = 6
 // Clicking the tray icon while the panel is open blurs it first; without this the
 // same click would reopen what the blur just closed.
 const REOPEN_GUARD_MS = 300
-
-type LiquidGlass = {
-  addView(handle: Buffer, options: { cornerRadius?: number }): number
-}
 
 let panel: BrowserWindow | null = null
 let height = 160
@@ -51,22 +47,6 @@ function live(): BrowserWindow | null {
   return panel && !panel.isDestroyed() ? panel : null
 }
 
-// Liquid Glass on macOS 26+, the addon's own blur on older macOS. It is a Mac-only
-// optional dependency, so Windows (or a native load failure) gets the CSS card.
-function applyGlass(win: BrowserWindow): boolean {
-  if (process.platform !== "darwin") return false
-  try {
-    const liquidGlass = require("electron-liquid-glass") as LiquidGlass
-    return (
-      liquidGlass.addView(win.getNativeWindowHandle(), {
-        cornerRadius: RADIUS,
-      }) >= 0
-    )
-  } catch {
-    return false
-  }
-}
-
 function create(): BrowserWindow {
   const win = new BrowserWindow({
     width: WIDTH,
@@ -98,7 +78,7 @@ function create(): BrowserWindow {
   })
   win.webContents.once("did-finish-load", () => {
     win.setTitle("Kumpan Recorder")
-    glass = applyGlass(win)
+    glass = applyGlass(win, RADIUS)
     refreshPanel()
   })
   win.webContents.setWindowOpenHandler(({ url }) => {

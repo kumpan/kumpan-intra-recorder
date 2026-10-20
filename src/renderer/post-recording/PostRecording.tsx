@@ -21,9 +21,7 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
   const [language, setLanguage] = useState<TranscriptLanguage>("sv")
 
   useEffect(() => {
-    void window.api
-      .getSettings()
-      .then((s) => setLanguage(s.transcriptLanguage))
+    void window.api.getSettings().then((s) => setLanguage(s.transcriptLanguage))
     window.api.handoff.getPending().then((result) => {
       if (!result) {
         setView({ kind: "discarded" })
@@ -34,9 +32,7 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
 
     const offProgress = window.api.handoff.onUploadProgress((progress) => {
       setView((current) =>
-        current.kind === "uploading"
-          ? { ...current, progress }
-          : current
+        current.kind === "uploading" ? { ...current, progress } : current
       )
     })
     return offProgress
@@ -88,7 +84,7 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <section className="handoff">
+    <>
       <Body
         view={view}
         language={language}
@@ -98,7 +94,7 @@ export function PostRecording({ onClose }: { onClose: () => void }) {
         onDiscard={onDiscard}
         onClose={onClose}
       />
-    </section>
+    </>
   )
 }
 
@@ -129,42 +125,53 @@ function Body({
 }: BodyProps) {
   switch (view.kind) {
     case "loading":
-      return <p className="status">Loading…</p>
+      return <p className="caption">Loading…</p>
 
     case "ready":
     case "upload-failed":
       return (
         <>
-          <Header
-            title="Recording finished"
-            subtitle={summary(view.result)}
-          />
-          {view.kind === "upload-failed" && (
-            <p className="status status--error">{view.message}</p>
-          )}
-          <div className="segmented" role="radiogroup" aria-label="Spoken language">
-            {LANGUAGES.map((l) => (
-              <button
-                key={l.value}
-                type="button"
-                role="radio"
-                aria-checked={language === l.value}
-                className={language === l.value ? "segmented__on" : undefined}
-                onClick={() => onLanguage(l.value)}
+          <Header title="Recording finished" subtitle={summary(view.result)} />
+          <div className="group">
+            <label className="row">
+              <span className="row__label">Spoken language</span>
+              <select
+                className="popup"
+                value={language}
+                onChange={(e) =>
+                  onLanguage(e.target.value as TranscriptLanguage)
+                }
               >
-                {l.label}
-              </button>
-            ))}
+                {LANGUAGES.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
+          {view.kind === "upload-failed" && (
+            <p className="caption caption--error">{view.message}</p>
+          )}
           <div className="handoff__actions">
-            <button type="button" className="primary" onClick={onUpload}>
-              {view.kind === "upload-failed" ? "Retry upload" : "Upload to intra"}
+            <button
+              type="button"
+              className="btn btn--large btn--primary"
+              onClick={onUpload}
+            >
+              {view.kind === "upload-failed"
+                ? "Retry Upload"
+                : "Upload to Intra"}
             </button>
             <div className="handoff__actions-row">
-              <button type="button" onClick={onSave}>
-                Save locally
+              <button type="button" className="btn btn--large" onClick={onSave}>
+                Save…
               </button>
-              <button type="button" className="danger" onClick={onDiscard}>
+              <button
+                type="button"
+                className="btn btn--large btn--danger"
+                onClick={onDiscard}
+              >
                 Discard
               </button>
             </div>
@@ -175,7 +182,10 @@ function Body({
     case "uploading": {
       const percent =
         view.progress.totalBytes > 0
-          ? Math.min(100, (view.progress.sentBytes / view.progress.totalBytes) * 100)
+          ? Math.min(
+              100,
+              (view.progress.sentBytes / view.progress.totalBytes) * 100
+            )
           : 0
       return (
         <>
@@ -186,7 +196,7 @@ function Body({
           <div className="progress">
             <div className="progress__bar" style={{ width: `${percent}%` }} />
           </div>
-          <p className="status">{percent.toFixed(0)}%</p>
+          <p className="caption">{percent.toFixed(0)}%</p>
         </>
       )
     }
@@ -198,13 +208,13 @@ function Body({
           <div className="handoff__actions">
             <button
               type="button"
-              className="primary"
+              className="btn btn--large btn--primary"
               onClick={() => window.api.openExternal(view.viewUrl)}
             >
-              Open in intra
+              Open in Intra
             </button>
-            <button type="button" onClick={onClose}>
-              Close
+            <button type="button" className="btn btn--large" onClick={onClose}>
+              Done
             </button>
           </div>
         </>
@@ -214,7 +224,7 @@ function Body({
       return (
         <>
           <Header title="Saving…" subtitle={summary(view.result)} />
-          <p className="status">Choose a destination in the save dialog.</p>
+          <p className="caption">Choose where to save it.</p>
         </>
       )
 
@@ -223,8 +233,8 @@ function Body({
         <>
           <Header title="Saved" subtitle={view.path} />
           <div className="handoff__actions">
-            <button type="button" className="primary" onClick={onClose}>
-              Close
+            <button type="button" className="btn btn--large" onClick={onClose}>
+              Done
             </button>
           </div>
         </>
@@ -235,8 +245,8 @@ function Body({
         <>
           <Header title="No recording" subtitle="Nothing to do here." />
           <div className="handoff__actions">
-            <button type="button" className="primary" onClick={onClose}>
-              Close
+            <button type="button" className="btn btn--large" onClick={onClose}>
+              Done
             </button>
           </div>
         </>
@@ -247,8 +257,8 @@ function Body({
 function Header({ title, subtitle }: { title: string; subtitle: string }) {
   return (
     <header className="handoff__header">
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
+      <strong>{title}</strong>
+      <span>{subtitle}</span>
     </header>
   )
 }
@@ -269,6 +279,7 @@ function formatDuration(seconds: number): string {
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }

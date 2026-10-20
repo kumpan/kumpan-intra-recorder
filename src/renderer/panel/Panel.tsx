@@ -3,6 +3,7 @@ import type { PanelState, RecorderState, UpdateState } from "@/shared/types"
 import { PostRecording } from "@/renderer/post-recording/PostRecording"
 import { Settings } from "@/renderer/components/Settings"
 import { formatForDisplay } from "@/renderer/components/HotkeyField"
+import { BackIcon, GearIcon, PowerIcon } from "@/renderer/components/icons"
 
 const isMac = /Mac/.test(navigator.platform)
 
@@ -48,55 +49,73 @@ export function Panel() {
     return () => observer.disconnect()
   }, [])
 
+  const busy = state
+    ? state.recorder.kind !== "idle" || state.pending !== null
+    : false
+
   return (
     <div ref={root} className={`panel${state?.glass ? " panel--glass" : ""}`}>
       {state && (
         <>
-          <header className="panel__header">
-            {settingsOpen && (
+          {settingsOpen ? (
+            <header className="panel__header panel__header--sub">
               <button
                 type="button"
-                className="panel__icon"
+                className="icon-btn"
                 aria-label="Back"
                 title="Back"
                 onClick={() => setSettingsOpen(false)}
               >
-                <BackIcon />
+                <BackIcon size={18} />
               </button>
-            )}
-            <strong>{settingsOpen ? "Settings" : "Kumpan Recorder"}</strong>
-            {!settingsOpen && (
-              <button
-                type="button"
-                className="panel__icon"
-                aria-label="Settings"
-                title="Settings"
-                onClick={() => setSettingsOpen(true)}
-              >
-                <GearIcon />
-              </button>
-            )}
-            <button
-              type="button"
-              className="panel__icon"
-              aria-label="Quit"
-              title="Quit"
-              onClick={() => void window.api.panel.quit()}
-            >
-              <PowerIcon />
-            </button>
-          </header>
-          {settingsOpen ? (
-            <Settings />
-          ) : handoffId ? (
-            <PostRecording key={handoffId} onClose={() => setHandoffId(null)} />
+              <h1>Settings</h1>
+            </header>
           ) : (
-            <RecordButton recorder={state.recorder} hotkey={state.hotkey} />
+            <header className="panel__header">
+              <h1>Kumpan Recorder</h1>
+              <div className="icon-pill">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label="Settings"
+                  title="Settings"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <GearIcon />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  aria-label="Quit"
+                  title="Quit Kumpan Recorder"
+                  onClick={() => void window.api.panel.quit()}
+                >
+                  <PowerIcon />
+                </button>
+              </div>
+            </header>
           )}
-          <UpdateRow
+          {settingsOpen ? (
+            <div className="panel__body panel__body--scroll">
+              <Settings version={state.version} update={state.update} />
+            </div>
+          ) : (
+            <div className="panel__body">
+              {handoffId ? (
+                <PostRecording
+                  key={handoffId}
+                  onClose={() => setHandoffId(null)}
+                />
+              ) : (
+                <RecordButton recorder={state.recorder} />
+              )}
+            </div>
+          )}
+          <Footer
             update={state.update}
             version={state.version}
-            busy={state.recorder.kind !== "idle" || state.pending !== null}
+            hotkey={state.hotkey}
+            busy={busy}
           />
         </>
       )}
@@ -104,13 +123,7 @@ export function Panel() {
   )
 }
 
-function RecordButton({
-  recorder,
-  hotkey,
-}: {
-  recorder: RecorderState
-  hotkey: string
-}) {
+function RecordButton({ recorder }: { recorder: RecorderState }) {
   const live = recorder.kind === "recording"
   const label = {
     idle: "Start recording",
@@ -129,13 +142,16 @@ function RecordButton({
           : window.api.panel.startRecording())
       }
     >
-      <span className="record__dot" aria-hidden="true" />
-      <span className="record__label">{label}</span>
-      {recorder.kind === "recording" ? (
-        <Elapsed since={recorder.startedAt} />
-      ) : (
-        hotkey && <kbd>{formatForDisplay(hotkey, isMac)}</kbd>
-      )}
+      <span className="record__icon" aria-hidden="true" />
+      <span className="record__label">
+        <strong>{label}</strong>
+        <small>
+          {live
+            ? "Call audio and your mic"
+            : "Call audio and your mic, kept local"}
+        </small>
+      </span>
+      {recorder.kind === "recording" && <Elapsed since={recorder.startedAt} />}
     </button>
   )
 }
@@ -157,16 +173,20 @@ function Elapsed({ since }: { since: string }) {
   )
 }
 
-function UpdateRow({
+function Footer({
   update,
   version,
+  hotkey,
   busy,
 }: {
   update: UpdateState
   version: string
+  hotkey: string
   busy: boolean
 }) {
-  const check = () => void window.api.panel.checkForUpdates()
+  const shortcut = hotkey && (
+    <kbd title="Start/stop shortcut">{formatForDisplay(hotkey, isMac)}</kbd>
+  )
   switch (update.kind) {
     case "ready":
       return (
@@ -174,7 +194,7 @@ function UpdateRow({
           <span>Version {update.version} is ready</span>
           <button
             type="button"
-            className="link"
+            className="btn btn--link"
             disabled={busy}
             title={busy ? "Finish the current recording first" : undefined}
             onClick={() => void window.api.panel.installUpdate()}
@@ -187,63 +207,15 @@ function UpdateRow({
       return (
         <footer className="panel__footer">
           <span>Downloading {update.version}…</span>
+          {shortcut}
         </footer>
       )
-    case "checking":
+    default:
       return (
         <footer className="panel__footer">
-          <span>Checking for updates…</span>
-        </footer>
-      )
-    case "error":
-      return (
-        <footer className="panel__footer">
-          <span className="status--error" title={update.message}>
-            Update check failed
-          </span>
-          <button type="button" className="link" onClick={check}>
-            Retry
-          </button>
-        </footer>
-      )
-    case "latest":
-    case "idle":
-      return (
-        <footer className="panel__footer">
-          <span>
-            v{version}
-            {update.kind === "latest" && " · up to date"}
-          </span>
-          <button type="button" className="link" onClick={check}>
-            Check for updates
-          </button>
+          <span>Version {version}</span>
+          {shortcut}
         </footer>
       )
   }
-}
-
-function GearIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  )
-}
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
-  )
-}
-
-function PowerIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-      <line x1="12" y1="2" x2="12" y2="12" />
-    </svg>
-  )
 }

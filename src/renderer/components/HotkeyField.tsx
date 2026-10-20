@@ -26,7 +26,8 @@ function eventToAccelerator(e: KeyboardEvent): string | null {
   if (e.metaKey) parts.push("Command")
   const key = e.key
   if (!key || MODIFIER_KEYS.has(key)) return null
-  const normalized = KEY_RENAME[key] ?? (key.length === 1 ? key.toUpperCase() : key)
+  const normalized =
+    KEY_RENAME[key] ?? (key.length === 1 ? key.toUpperCase() : key)
   parts.push(normalized)
   if (parts.length < 2) return null
   return parts.join("+")
@@ -57,103 +58,76 @@ export function formatForDisplay(accelerator: string, mac: boolean): string {
     .join(mac ? "" : "+")
 }
 
+// Click, press the combination, done — the way macOS shortcut recorders work. Delete
+// while recording clears it, Esc or a click elsewhere backs out.
 export function HotkeyField({ value, defaultValue, onChange }: Props) {
   const [capturing, setCapturing] = useState(false)
-  const [draft, setDraft] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const isMac =
-    typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
+    typeof navigator !== "undefined" &&
+    /Mac|iPhone|iPad/.test(navigator.platform)
+
+  const commit = async (next: string) => {
+    setCapturing(false)
+    setError(null)
+    try {
+      await onChange(next)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to set shortcut.")
+    }
+  }
 
   useEffect(() => {
     if (!capturing) return
     const onKey = (e: KeyboardEvent) => {
       e.preventDefault()
-      if (e.key === "Escape") {
-        setCapturing(false)
-        setDraft(null)
-        return
-      }
+      if (e.key === "Escape") return setCapturing(false)
+      if (e.key === "Backspace" || e.key === "Delete") return void commit("")
       const acc = eventToAccelerator(e)
-      if (acc) setDraft(acc)
+      if (acc) void commit(acc)
+    }
+    const onClick = (e: MouseEvent) => {
+      if (!buttonRef.current?.contains(e.target as Node)) setCapturing(false)
     }
     window.addEventListener("keydown", onKey, true)
-    return () => window.removeEventListener("keydown", onKey, true)
-  }, [capturing])
-
-  useEffect(() => {
-    if (!capturing) return
-    const onClick = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) {
-        setCapturing(false)
-        setDraft(null)
-      }
-    }
     window.addEventListener("mousedown", onClick, true)
-    return () => window.removeEventListener("mousedown", onClick, true)
-  }, [capturing])
-
-  const commit = async (next: string) => {
-    setError(null)
-    try {
-      await onChange(next)
-      setDraft(null)
-      setCapturing(false)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to set hotkey.")
+    return () => {
+      window.removeEventListener("keydown", onKey, true)
+      window.removeEventListener("mousedown", onClick, true)
     }
-  }
-
-  const display = capturing
-    ? draft
-      ? `Captured: ${formatForDisplay(draft, isMac)}`
-      : "Press a key combination…"
-    : formatForDisplay(value, isMac)
+  }, [capturing])
 
   return (
-    <div className="hotkey" ref={containerRef}>
-      <button
-        type="button"
-        className={`hotkey__display${capturing ? " hotkey__display--capturing" : ""}`}
-        onClick={() => {
-          if (!capturing) {
-            setCapturing(true)
-            setDraft(null)
-            setError(null)
-          }
-        }}
-      >
-        {display}
-      </button>
-      <div className="hotkey__actions">
-        {capturing && draft && (
-          <button type="button" className="primary" onClick={() => commit(draft)}>
-            Save
-          </button>
-        )}
-        {capturing && (
+    <>
+      <div className="row">
+        <span className="row__label">Start/stop shortcut</span>
+        {!capturing && value !== defaultValue && (
           <button
             type="button"
-            onClick={() => {
-              setCapturing(false)
-              setDraft(null)
-            }}
+            className="btn"
+            onClick={() => void commit(defaultValue)}
           >
-            Cancel
-          </button>
-        )}
-        {!capturing && value !== defaultValue && (
-          <button type="button" onClick={() => commit(defaultValue)}>
             Reset
           </button>
         )}
-        {!capturing && value !== "" && (
-          <button type="button" onClick={() => commit("")}>
-            Disable
-          </button>
-        )}
+        <button
+          ref={buttonRef}
+          type="button"
+          className={`btn hotkey${capturing ? " hotkey--capturing" : ""}`}
+          onClick={() => {
+            setError(null)
+            setCapturing(true)
+          }}
+        >
+          {capturing ? "Type shortcut…" : formatForDisplay(value, isMac)}
+        </button>
       </div>
-      {error && <p className="status status--error">{error}</p>}
-    </div>
+      {error && (
+        <div className="row">
+          <span className="row__value row__value--error">{error}</span>
+        </div>
+      )}
+    </>
   )
 }

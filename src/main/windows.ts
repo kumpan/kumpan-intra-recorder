@@ -4,8 +4,25 @@ import { join } from "node:path"
 let recorderWindow: BrowserWindow | null = null
 let meetingBannerWindow: BrowserWindow | null = null
 
-export const preloadPath = (): string =>
-  join(__dirname, "../preload/index.js")
+type LiquidGlass = {
+  addView(handle: Buffer, options: { cornerRadius?: number }): number
+}
+
+// Liquid Glass on macOS 26+, the addon's own blur on older macOS. It is a Mac-only
+// optional dependency, so Windows (or a native load failure) gets the CSS card.
+export function applyGlass(win: BrowserWindow, cornerRadius: number): boolean {
+  if (process.platform !== "darwin") return false
+  try {
+    const liquidGlass = require("electron-liquid-glass") as LiquidGlass
+    return (
+      liquidGlass.addView(win.getNativeWindowHandle(), { cornerRadius }) >= 0
+    )
+  } catch {
+    return false
+  }
+}
+
+export const preloadPath = (): string => join(__dirname, "../preload/index.js")
 
 export function loadView(
   window: BrowserWindow,
@@ -60,8 +77,8 @@ export function closeRecorderWindow(): void {
   recorderWindow = null
 }
 
-const BANNER_WIDTH = 460
-const BANNER_HEIGHT = 80
+const BANNER_WIDTH = 520
+const BANNER_HEIGHT = 72
 
 export function openMeetingBanner(title: string): void {
   if (meetingBannerWindow && !meetingBannerWindow.isDestroyed()) {
@@ -80,7 +97,6 @@ export function openMeetingBanner(title: string): void {
     frame: false,
     transparent: true,
     backgroundColor: "#00000000",
-    hasShadow: false,
     resizable: false,
     movable: false,
     minimizable: false,
@@ -103,6 +119,13 @@ export function openMeetingBanner(title: string): void {
   meetingBannerWindow.setAlwaysOnTop(true, "screen-saver")
   meetingBannerWindow.setVisibleOnAllWorkspaces(true, {
     visibleOnFullScreen: true,
+  })
+
+  const win = meetingBannerWindow
+  win.webContents.once("did-finish-load", () => {
+    // The window is the capsule itself; with glass behind it the page drops its own fill.
+    if (applyGlass(win, BANNER_HEIGHT / 2))
+      void win.webContents.insertCSS(":root { --banner-bg: transparent }")
   })
 
   meetingBannerWindow.once("ready-to-show", () => {
