@@ -174,7 +174,7 @@ export async function updateLastLaunchedVersion(value: string): Promise<void> {
 export function isTranscriptLanguage(
   value: unknown
 ): value is TranscriptLanguage {
-  return value === "sv" || value === "en" || value === "auto"
+  return value === "sv" || value === "en"
 }
 
 export function getTranscriptLanguage(): TranscriptLanguage {

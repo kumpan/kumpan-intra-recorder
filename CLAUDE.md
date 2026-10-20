@@ -126,7 +126,7 @@ Fields:
   duration:  <seconds, integer>
   startedAt: <ISO timestamp>
   endedAt:   <ISO timestamp>
-  language:  "sv" | "en" | "auto"   (picked before upload; "auto" = intra auto-detects)
+  language:  "sv" | "en"   (picked before upload; intra also accepts "auto", unused)
 
 200 → { id: string, viewUrl: string }
 401 → invalid token

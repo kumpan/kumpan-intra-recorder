@@ -1,6 +1,7 @@
-// What intra transcribes the recording as. "auto" lets the transcriber guess, which
-// mishears Swedish salted with English terms often enough to be worth choosing.
-export type TranscriptLanguage = "sv" | "en" | "auto"
+// What intra transcribes the recording as. No "auto": the transcriber picks one
+// language per channel for the whole file and writes the rest out phonetically, while
+// the person uploading always knows what was spoken.
+export type TranscriptLanguage = "sv" | "en"
 
 export type Settings = {
   baseUrl: string

@@ -162,8 +162,15 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(
     IpcChannel.HandoffUpload,
-    async (_event, sessionId: string, language: unknown): Promise<UploadOutcome> =>
-      uploadPending(sessionId, isTranscriptLanguage(language) ? language : "auto")
+    async (
+      _event,
+      sessionId: string,
+      language: unknown
+    ): Promise<UploadOutcome> =>
+      uploadPending(
+        sessionId,
+        isTranscriptLanguage(language) ? language : getTranscriptLanguage()
+      )
   )
 
   ipcMain.handle(
@@ -182,7 +189,8 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(IpcChannel.PanelGetState, (): PanelState => panelState())
 
   ipcMain.on(IpcChannel.PanelResize, (_event, height: number) => {
-    if (typeof height === "number" && Number.isFinite(height)) resizePanel(height)
+    if (typeof height === "number" && Number.isFinite(height))
+      resizePanel(height)
   })
 
   ipcMain.handle(IpcChannel.PanelStartRecording, async (): Promise<void> => {
